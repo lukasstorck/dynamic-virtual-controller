@@ -35,9 +35,9 @@ async def index():
     return FileResponse(static_dir / 'index.html')
 
 
-@app.get('/controller/{group_id}')
-async def controller_page(group_id: str):
-    return FileResponse(static_dir / 'controller.html')
+@app.get('/group/{group_id}')
+async def group_page(group_id: str):
+    return FileResponse(static_dir / 'group.html')
 
 
 @app.websocket('/ws/input')
