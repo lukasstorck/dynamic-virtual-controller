@@ -104,15 +104,12 @@ async def ws_input(websocket: WebSocket, controller_id: str):
                 controller.last_states[code] = state
                 controller.touch()
                 if controller.output_ws:
-                    try:
-                        await controller.output_ws.send_text(json.dumps({
-                            "type": "key_event",
-                            "controller_name": controller.name,
-                            "code": code,
-                            "state": state
-                        }))
-                    except Exception as e:
-                        print(f"[{controller_id}] Error forwarding key_event to output: {e}")
+                    await controller.output_ws.send_text(json.dumps({
+                        "type": "key_event",
+                        "controller_name": controller.name,
+                        "code": code,
+                        "state": state
+                    }))
                 await websocket.send_text(json.dumps({"type": "ack", "code": code, "state": state}))
 
             elif message_type == "set_name":

@@ -12,6 +12,24 @@
     </div>
 
     <script>
+        // Local browser-side mapping: keyboard codes → semantic button names
+        const KEY_TO_BUTTON = {
+            "KeyW": "BTN_DPAD_UP",
+            "KeyA": "BTN_DPAD_LEFT",
+            "KeyS": "BTN_DPAD_DOWN",
+            "KeyD": "BTN_DPAD_RIGHT",
+            "KeyE": "BTN_A",
+            "KeyQ": "BTN_B",
+            "KeyX": "BTN_X",
+            "KeyY": "BTN_Y",
+            "Tab": "BTN_TL",
+            "KeyR": "BTN_TR",
+            "Escape": "BTN_START",
+            "Space": "BTN_A",
+            "KeyZ": "BTN_Y",
+            "KeyF": "BTN_Y"
+        };
+
         const controllerId = window.location.pathname.split('/').pop();
         const ws = new WebSocket(`ws://${window.location.host}/ws/input/${controllerId}`);
 
@@ -19,12 +37,22 @@
             document.getElementById('status').innerText = "Connected! Press keys to send.";
         };
 
+        function sendButtonEvent(code, state) {
+            const buttonName = KEY_TO_BUTTON[code];
+            if (!buttonName) return; // Ignore unmapped keys
+            ws.send(JSON.stringify({
+                type: 'keypress',
+                code: buttonName, // Now sending semantic name directly
+                state: state
+            }));
+        }
+
         document.addEventListener('keydown', (e) => {
-            ws.send(JSON.stringify({ type: 'keypress', code: e.code, state: 1 }));
+            sendButtonEvent(e.code, 1);
         });
 
         document.addEventListener('keyup', (e) => {
-            ws.send(JSON.stringify({ type: 'keypress', code: e.code, state: 0 }));
+            sendButtonEvent(e.code, 0);
         });
     </script>
 </body>
