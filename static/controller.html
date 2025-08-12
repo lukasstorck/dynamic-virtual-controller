@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Controller</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-white">
+    <div class="container py-5">
+        <h1>Controller Interface</h1>
+        <p id="status">Connecting...</p>
+    </div>
+
+    <script>
+        const controllerId = window.location.pathname.split('/').pop();
+        const ws = new WebSocket(`ws://${window.location.host}/ws/input/${controllerId}`);
+
+        ws.onopen = () => {
+            document.getElementById('status').innerText = "Connected! Press keys to send.";
+        };
+
+        document.addEventListener('keydown', (e) => {
+            ws.send(JSON.stringify({ type: 'keypress', code: e.code, state: 1 }));
+        });
+
+        document.addEventListener('keyup', (e) => {
+            ws.send(JSON.stringify({ type: 'keypress', code: e.code, state: 0 }));
+        });
+    </script>
+</body>
+</html>
