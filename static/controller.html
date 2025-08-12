@@ -1,18 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Controller</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
+
 <body class="bg-dark text-white">
     <div class="container py-5">
-        <h1>Controller Interface</h1>
+        <h1>Controller</h1>
         <p id="status">Connecting...</p>
+
+        <div class="mb-3">
+            <label for="output-select" class="form-label">Select Output</label>
+            <select id="output-select" class="form-select">
+                <option value="">-- No output selected --</option>
+            </select>
+        </div>
     </div>
 
     <script>
-        // Local browser-side mapping: keyboard codes → semantic button names
         const KEY_TO_BUTTON = {
             "KeyW": "BTN_DPAD_UP",
             "KeyA": "BTN_DPAD_LEFT",
@@ -30,19 +38,66 @@
             "KeyF": "BTN_Y"
         };
 
-        const controllerId = window.location.pathname.split('/').pop();
-        const ws = new WebSocket(`ws://${window.location.host}/ws/input/${controllerId}`);
+        const groupId = window.location.pathname.split('/').pop();
+        const ws = new WebSocket(`ws://${window.location.host}/ws/input?group_id=${groupId}`);
+
+        let selectedOutput = null;
 
         ws.onopen = () => {
-            document.getElementById('status').innerText = "Connected! Press keys to send.";
+            document.getElementById("status").innerText = "Connected to group " + groupId;
         };
 
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === "welcome") {
+                populateOutputs(data.available_outputs);
+            } else if (data.type === "output_available") {
+                addOutputOption(data.output_id);
+            } else if (data.type === "output_unavailable") {
+                removeOutputOption(data.output_id);
+            } else if (data.type === "output_selected") {
+                selectedOutput = data.output_id;
+            }
+        };
+
+        function populateOutputs(outputs) {
+            const sel = document.getElementById("output-select");
+            sel.innerHTML = `<option value="">-- No output selected --</option>`;
+            outputs.forEach(o => addOutputOption(o));
+        }
+
+        function addOutputOption(outputId) {
+            const sel = document.getElementById("output-select");
+            if (!Array.from(sel.options).some(opt => opt.value === outputId)) {
+                const opt = document.createElement("option");
+                opt.value = outputId;
+                opt.text = outputId;
+                sel.appendChild(opt);
+            }
+        }
+
+        function removeOutputOption(outputId) {
+            const sel = document.getElementById("output-select");
+            sel.querySelectorAll(`option[value="${outputId}"]`).forEach(opt => opt.remove());
+        }
+
+        document.getElementById("output-select").addEventListener("change", (e) => {
+            selectedOutput = e.target.value;
+            if (selectedOutput) {
+                ws.send(JSON.stringify({
+                    type: "select_output",
+                    output_id: selectedOutput
+                }));
+            }
+        });
+
         function sendButtonEvent(code, state) {
-            const buttonName = KEY_TO_BUTTON[code];
-            if (!buttonName) return; // Ignore unmapped keys
+            if (!selectedOutput) return;
+            const btn = KEY_TO_BUTTON[code];
+            if (!btn) return;
             ws.send(JSON.stringify({
-                type: 'keypress',
-                code: buttonName, // Now sending semantic name directly
+                type: "keypress",
+                code: btn,
                 state: state
             }));
         }
@@ -56,4 +111,5 @@
         });
     </script>
 </body>
+
 </html>
