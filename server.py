@@ -65,7 +65,9 @@ async def get_controller(controller_id: str = None):
         if controller_id is None or controller_id not in controllers:
             controller = Controller(controller_id)
             controllers[controller.id] = controller
-        return controllers[controller_id]
+            return controller
+        else:
+            return controllers[controller_id]
 
 
 @app.get("/controller/{controller_id}", response_class=HTMLResponse)
