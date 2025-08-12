@@ -4,6 +4,13 @@ import argparse
 import uinput
 import websockets
 
+
+SERVER_HOST = "localhost"
+SERVER_PORT = 8000
+SECURE = False
+SERVER_HTTP = f"http{"s" if SECURE else ""}://{SERVER_HOST}:{SERVER_PORT}"
+SERVER_WS = f"ws{"s" if SECURE else ""}://{SERVER_HOST}:{SERVER_PORT}/ws/output"
+
 SEMANTIC_TO_UINPUT = {
     "BTN_DPAD_UP": uinput.BTN_DPAD_UP,
     "BTN_DPAD_DOWN": uinput.BTN_DPAD_DOWN,
@@ -18,7 +25,6 @@ SEMANTIC_TO_UINPUT = {
     "BTN_START": uinput.BTN_START,
 }
 
-SERVER_WS = "ws://localhost:8000/ws/output"
 
 class UInputController:
     def __init__(self):
@@ -35,16 +41,19 @@ class UInputController:
         self.device.emit(uev, state)
         print(f"Emitted: {button_name} -> {state}")
 
-async def run(group_id: str, output_id: str | None):
+
+async def start_server(group_id: str, output_id: str | None):
     uri = f"{SERVER_WS}?group_id={group_id}"
     if output_id:
         uri += f"&output_id={output_id}"
     async with websockets.connect(uri) as ws:
         msg = await ws.recv()
-        data = json.loads(msg)
+        data: dict[str, str] = json.loads(msg)
         if data.get("type") != "config":
             print("Unexpected initial message:", data)
         print(f"Connected as output {data['output_id']} in group {data['group_id']}")
+        print(f'Available buttons: {", ".join(SEMANTIC_TO_UINPUT.keys())}')
+        print(f'Open {SERVER_HTTP}/?group_id={group_id} to join group {group_id}')
 
         ui = UInputController()
 
@@ -62,4 +71,4 @@ if __name__ == "__main__":
     parser.add_argument("--group", help="Group ID to join", required=True)
     parser.add_argument("--id", help="Output ID (optional)", default=None)
     args = parser.parse_args()
-    asyncio.run(run(args.group, args.id))
+    asyncio.run(start_server(args.group, args.id))

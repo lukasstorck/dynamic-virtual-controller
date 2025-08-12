@@ -3,34 +3,158 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Dynamic Virtual Controller</title>
+    <title>Dynamic Virtual Controller - One Page</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 
 <body class="bg-light">
     <div class="container py-5">
         <h1 class="mb-4 text-center">Dynamic Virtual Controller</h1>
-        <div class="card p-4 shadow-sm">
+
+        <!-- Join Section -->
+        <div id="join-section" class="card p-4 shadow-sm mb-4">
+            <div class="mb-3">
+                <label for="name" class="form-label">Your Name (optional)</label>
+                <input id="name" type="text" class="form-control" placeholder="Enter your name">
+            </div>
             <div class="mb-3">
                 <label for="group_id" class="form-label">Group ID (leave blank to create new)</label>
-                <input id="group_id" type="text" class="form-control">
+                <input id="group_id" type="text" class="form-control" placeholder="Enter group ID">
             </div>
             <button id="join-btn" class="btn btn-primary w-100">Join Group</button>
         </div>
-        <div id="link" class="mt-3"></div>
+
+        <!-- Group Section -->
+        <div id="group-section" class="card p-4 shadow-sm d-none">
+            <h2 class="h5">Group Controls</h2>
+            <p id="status" class="text-muted">Not connected</p>
+
+            <div class="mb-3">
+                <label for="output-select" class="form-label">Select Output</label>
+                <select id="output-select" class="form-select">
+                    <option value="">-- No output selected --</option>
+                </select>
+            </div>
+        </div>
     </div>
 
     <script>
+        const KEY_TO_BUTTON = {
+            "KeyW": "BTN_DPAD_UP",
+            "KeyA": "BTN_DPAD_LEFT",
+            "KeyS": "BTN_DPAD_DOWN",
+            "KeyD": "BTN_DPAD_RIGHT",
+            "KeyE": "BTN_A",
+            "KeyQ": "BTN_B",
+            "KeyX": "BTN_X",
+            "KeyY": "BTN_Y",
+            "Tab": "BTN_TL",
+            "KeyR": "BTN_TR",
+            "Escape": "BTN_START",
+            "Space": "BTN_A",
+            "KeyZ": "BTN_Y",
+            "KeyF": "BTN_Y"
+        };
+
+        let ws = null;
+        let selectedOutput = null;
+        let groupId = null;
+
         document.getElementById("join-btn").addEventListener("click", () => {
-            let gid = document.getElementById("group_id").value.trim();
-            if (!gid) {
-                gid = "group_" + crypto.randomUUID().replace(/-/g, '');
+            joinFromInput();
+        });
+
+        function joinFromInput() {
+            groupId = document.getElementById("group_id").value.trim();
+            if (!groupId) {
+                groupId = "group_" + crypto.randomUUID().replace(/-/g, '');
             }
-            const link = `/group/${gid}`;
-            document.getElementById("link").innerHTML =
-                `<div class="alert alert-success">Join link: <a href="${link}" target="_blank">${link}</a></div>`;
+            connectToGroup(groupId);
+        }
+
+        function connectToGroup(gid) {
+            ws = new WebSocket(`ws://${window.location.host}/ws/input?group_id=${gid}`);
+
+            ws.onopen = () => {
+                document.getElementById("group-section").classList.remove("d-none");
+                document.getElementById("join-section").classList.add("d-none");
+                document.getElementById("status").innerText = "Connected to group " + gid;
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === "welcome") {
+                    populateOutputs(data.available_outputs);
+                } else if (data.type === "output_available") {
+                    addOutputOption(data.output_id);
+                } else if (data.type === "output_unavailable") {
+                    removeOutputOption(data.output_id);
+                } else if (data.type === "output_selected") {
+                    selectedOutput = data.output_id;
+                }
+            };
+        }
+
+        function populateOutputs(outputs) {
+            const sel = document.getElementById("output-select");
+            sel.innerHTML = `<option value="">-- No output selected --</option>`;
+            outputs.forEach(o => addOutputOption(o));
+        }
+
+        function addOutputOption(outputId) {
+            const sel = document.getElementById("output-select");
+            if (!Array.from(sel.options).some(opt => opt.value === outputId)) {
+                const opt = document.createElement("option");
+                opt.value = outputId;
+                opt.text = outputId;
+                sel.appendChild(opt);
+            }
+        }
+
+        function removeOutputOption(outputId) {
+            const sel = document.getElementById("output-select");
+            sel.querySelectorAll(`option[value="${outputId}"]`).forEach(opt => opt.remove());
+        }
+
+        document.getElementById("output-select").addEventListener("change", (event) => {
+            selectedOutput = event.target.value;
+            if (selectedOutput) {
+                ws.send(JSON.stringify({
+                    type: "select_output",
+                    output_id: selectedOutput
+                }));
+            }
+        });
+
+        function sendButtonEvent(code, state) {
+            if (!selectedOutput) return;
+            const btn = KEY_TO_BUTTON[code];
+            if (!btn) return;
+            ws.send(JSON.stringify({
+                type: "keypress",
+                code: btn,
+                state: state
+            }));
+        }
+
+        document.addEventListener('keydown', (event) => {
+            sendButtonEvent(event.code, 1);
+        });
+
+        document.addEventListener('keyup', (event) => {
+            sendButtonEvent(event.code, 0);
+        });
+
+        window.addEventListener("DOMContentLoaded", () => {
+            const params = new URLSearchParams(window.location.search);
+            const urlGroupId = params.get("group_id");
+            if (urlGroupId) {
+                // remove id from URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                groupId = urlGroupId.trim();
+                connectToGroup(groupId);
+            }
         });
     </script>
 </body>
-
 </html>
