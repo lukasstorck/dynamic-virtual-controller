@@ -1,0 +1,9 @@
+/* Simple color tags for client labels */
+.client-tag {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    color: #fff;
+    font-size: 0.85rem;
+    margin: 0.1rem;
+}
