@@ -22,50 +22,50 @@ let currentUser = null;
 let inputClients = [];
 let outputDevices = [];
 
-// Color palette for clients
-const clientColors = [
-  "#ff6f61",
-  "#6b5b95",
-  "#88b04b",
-  "#f7cac9",
-  "#92a8d1",
-  "#955251",
-  "#b565a7",
-  "#009b77",
-];
-const clientColorMap = new Map();
-
 // ==== DOM Elements ====
 const joinBtn = document.getElementById("join-btn");
 const nameInput = document.getElementById("name");
+const colorInput = document.getElementById("color");
 const groupIdInput = document.getElementById("group-id");
 const clientsTableBody = document.querySelector("#clients-table-body");
 const outputDevicesContainer = document.querySelector(
   "#output-devices-container"
 );
 
-// ==== Helpers ====
-function getClientColor(name) {
-  if (!clientColorMap.has(name)) {
-    const color = clientColors[clientColorMap.size % clientColors.length];
-    clientColorMap.set(name, color);
+// ==== WebSocket Connection ====
+function updateUserData(event = null) {
+  currentUser = nameInput.value.trim() || currentUser;
+  currentColor = colorInput.value;
+  localStorage.setItem("dvc_name", currentUser);
+  localStorage.setItem("dvc_color", currentColor);
+
+  if (websocket && websocket.readyState === WebSocket.OPEN) {
+    websocket.send(
+      JSON.stringify({
+        type: "register",
+        name: currentUser,
+        color: currentColor,
+      })
+    );
   }
-  return clientColorMap.get(name);
 }
 
-// ==== WebSocket Connection ====
-function connectToGroup(gid) {
+function connectToGroup(new_group_id) {
   // close previous connection, if there is one
   if (websocket) websocket.close();
   websocket = new WebSocket(
-    `ws://${window.location.host}/ws/input?group_id=${gid}`
+    `ws://${window.location.host}/ws/input?group_id=${new_group_id}`
   );
 
   websocket.onopen = () => {
-    const displayName =
-      nameInput.value.trim() || `User-${crypto.randomUUID().slice(0, 4)}`;
-    currentUser = displayName;
-    websocket.send(JSON.stringify({ type: "register", name: displayName }));
+    currentUser =
+      nameInput.value.trim() ||
+      localStorage.getItem("dvc_name") ||
+      `User-${crypto.randomUUID().slice(0, 4)}`;
+    currentColor =
+      colorInput.value || localStorage.getItem("dvc_color") || "#ff6f61";
+    groupId = new_group_id;
+    updateUserData();
   };
 
   websocket.onmessage = (event) => {
@@ -75,6 +75,7 @@ function connectToGroup(gid) {
       inputClients = (data.input_clients || []).map((inputClient) => ({
         id: inputClient.input_id,
         name: inputClient.name,
+        color: inputClient.color,
         lastActivity: inputClient.lastActivity,
         devices: inputClient.selected_output
           ? [inputClient.selected_output]
@@ -122,7 +123,7 @@ function renderInputClients() {
     const tdName = document.createElement("td");
     const tag = document.createElement("span");
     tag.className = "client-tag";
-    tag.style.backgroundColor = getClientColor(client.name);
+    tag.style.backgroundColor = client.color || "#ccc";
     tag.textContent = client.name;
     tdName.appendChild(tag);
 
@@ -181,9 +182,10 @@ function renderOutputDevices() {
 
     const clientsList = document.createElement("div");
     device.connectedClients.forEach((clientName) => {
+      const clientData = inputClients.find((c) => c.name === clientName);
       const tag = document.createElement("span");
       tag.className = "client-tag";
-      tag.style.backgroundColor = getClientColor(clientName);
+      tag.style.backgroundColor = clientData?.color || "#ccc";
       tag.textContent = clientName;
       clientsList.appendChild(tag);
     });
@@ -209,19 +211,45 @@ function toggleDeviceConnection(event, deviceId) {
 }
 
 // ==== Initial Load ====
-joinBtn.addEventListener("click", () => {
-  const gid =
+function handleJoinGroupButton(event) {
+  event.preventDefault();
+  const group_id =
     groupIdInput.value.trim() ||
     `group_${crypto.randomUUID().replaceAll("-", "")}`;
-  connectToGroup(gid);
-});
+  connectToGroup(group_id);
+}
 
-window.addEventListener("DOMContentLoaded", () => {
-  const params = new URLSearchParams(window.location.search);
+function removeGroupIdFromURL(event) {
+  const url = new URL(window.location.href);
+  const params = new URLSearchParams(url.search);
   const urlGroupId = params.get("group_id");
-  if (urlGroupId) {
-    window.history.replaceState({}, document.title, window.location.pathname);
-    groupId = urlGroupId.trim();
-    connectToGroup(groupId);
+  groupId = urlGroupId.trim();
+
+  params.delete("group_id");
+  const newUrl = `${url.origin}${url.pathname}`;
+  window.history.replaceState({}, document.title, newUrl);
+
+  if (groupId) connectToGroup(groupId);
+}
+
+function loadDataFromLocalStorage() {
+  const savedName = localStorage.getItem("dvc_name");
+  const savedColor = localStorage.getItem("dvc_color");
+
+  if (savedName) {
+    nameInput.value = savedName;
+    currentUser = savedName;
   }
+  if (savedColor) {
+    colorInput.value = savedColor;
+    currentColor = savedColor;
+  }
+}
+
+nameInput.addEventListener("input", updateUserData);
+colorInput.addEventListener("input", updateUserData);
+joinBtn.addEventListener("click", handleJoinGroupButton);
+window.addEventListener("DOMContentLoaded", () => {
+  removeGroupIdFromURL();
+  loadDataFromLocalStorage();
 });

@@ -24,6 +24,7 @@ class Group:
             input_clients.append({
                 'input_id': input_id,
                 'name': info.get('name') or input_id,
+                'color': info.get('color', '#cccccc'),
                 'lastActivity': info.get('lastActivity', 'just now'),
                 'selected_output': info.get('selected_output')
             })
@@ -40,6 +41,14 @@ class Group:
                 'connected_inputs': connected
             })
         return {'type': 'group_state', 'group_id': self.id, 'input_clients': input_clients, 'output_devices': output_devices}
+
+    async def broadcast_group_state(self):
+        state = json.dumps(self.serialize_state())
+        for ws in [p['ws'] for p in self.input_clients.values()]:
+            try:
+                await ws.send_text(state)
+            except Exception:
+                pass
 
 
 async def get_group(group_id: str):
@@ -69,16 +78,13 @@ async def ws_input(websocket: WebSocket):
     group.input_clients[input_id] = {'ws': websocket, 'name': None, 'lastActivity': 'just now', 'selected_output': None}
 
     try:
-        for ws in [p['ws'] for p in group.input_clients.values()]:
-            try:
-                await ws.send_text(json.dumps(group.serialize_state()))
-            except Exception:
-                pass
+        await group.broadcast_group_state()
 
         while True:
             data: dict[str, str] = json.loads(await websocket.receive_text())
             if data.get('type') == 'register':
                 group.input_clients[input_id]['name'] = data.get('name') or input_id
+                group.input_clients[input_id]['color'] = data.get('color', '#cccccc')
                 group.input_clients[input_id]['lastActivity'] = 'just now'
             elif data.get('type') == 'select_output':
                 target = data.get('output_id')
@@ -97,12 +103,10 @@ async def ws_input(websocket: WebSocket):
                         'code': data.get('code'),
                         'state': data.get('state'),
                     }))
-            for ws in [p['ws'] for p in group.input_clients.values()]:
-                await ws.send_text(json.dumps(group.serialize_state()))
+            await group.broadcast_group_state()
     except WebSocketDisconnect:
         group.input_clients.pop(input_id, None)
-        for ws in [p['ws'] for p in group.input_clients.values()]:
-            await ws.send_text(json.dumps(group.serialize_state()))
+        await group.broadcast_group_state()
 
 
 @app.websocket('/ws/output')
@@ -116,8 +120,7 @@ async def ws_output(websocket: WebSocket):
     group = await get_group(group_id)
     group.output_devices[output_id] = {'ws': websocket, 'name': output_name}
 
-    for ws in [p['ws'] for p in group.input_clients.values()]:
-        await ws.send_text(json.dumps(group.serialize_state()))
+    await group.broadcast_group_state()
 
     await websocket.send_text(json.dumps({
         'type': 'config',
@@ -130,12 +133,10 @@ async def ws_output(websocket: WebSocket):
             data = json.loads(await websocket.receive_text())
             if data.get('type') == 'rename' and 'name' in data:
                 group.output_devices[output_id]['name'] = data['name']
-                for ws in [p['ws'] for p in group.input_clients.values()]:
-                    await ws.send_text(json.dumps(group.serialize_state()))
+                await group.broadcast_group_state()
     except WebSocketDisconnect:
         group.output_devices.pop(output_id, None)
-        for ws in [p['ws'] for p in group.input_clients.values()]:
-            await ws.send_text(json.dumps(group.serialize_state()))
+        await group.broadcast_group_state()
         print(f'[{group_id}] Output {output_id} disconnected.')
 
 if __name__ == '__main__':
