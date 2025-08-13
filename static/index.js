@@ -163,33 +163,24 @@ function renderOutputDevices() {
 
     // Editable title
     const titleWrapper = document.createElement("div");
-    titleWrapper.style.display = "flex";
-    titleWrapper.style.alignItems = "center";
-    titleWrapper.style.gap = "0.5rem";
-    titleWrapper.style.width = "100%";
+    titleWrapper.className = "d-flex align-items-center w-100 gap-2";
 
     const title = document.createElement("h6");
-    title.className = "fw-bold mb-0";
+    title.className = "fw-bold mb-0 flex-grow-1 text-truncate";
     title.contentEditable = "true";
     title.textContent = device.name;
-    title.style.flex = "1";
-    title.style.minWidth = "0";
-    title.classList.add("w-100");
 
     let originalName = device.name;
 
     const saveBtn = document.createElement("button");
     saveBtn.textContent = "✔";
-    saveBtn.className = "btn btn-sm btn-success";
-    saveBtn.style.display = "none"; // only visible when name changes
-    saveBtn.style.flexShrink = "0";
+    saveBtn.className = "btn btn-success btn-sm";
+    saveBtn.classList.add("flex-shrink-0", "px-2", "py-0");
+    saveBtn.style.display = "none"; // hidden until change
 
-    function updateSaveButtonVisibility(event) {
-      if (title.textContent.trim() !== originalName) {
-        saveBtn.style.display = "inline-block";
-      } else {
-        saveBtn.style.display = "none";
-      }
+    function updateSaveButtonVisibility() {
+      saveBtn.style.display =
+        title.textContent.trim() !== originalName ? "inline-block" : "none";
     }
 
     function sendNameUpdate() {
@@ -228,8 +219,7 @@ function renderOutputDevices() {
       sendNameUpdate();
     });
 
-    titleWrapper.appendChild(title);
-    titleWrapper.appendChild(saveBtn);
+    titleWrapper.append(title, saveBtn);
 
     const idInfo = document.createElement("p");
     idInfo.className = "text-muted";
