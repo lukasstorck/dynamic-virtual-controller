@@ -163,6 +163,20 @@ function renderOutputDevices() {
     title.contentEditable = "true";
     title.textContent = device.name;
 
+    function updateDeviceName(event) {
+      device.name = event.target.textContent;
+      if (websocket && websocket.readyState === WebSocket.OPEN) {
+        websocket.send(
+          JSON.stringify({
+            type: "rename_output",
+            output_id: device.id,
+            name: device.name,
+          })
+        );
+      }
+    }
+    title.addEventListener("input", updateDeviceName);
+
     const idInfo = document.createElement("p");
     idInfo.className = "text-muted";
     idInfo.textContent = `ID: ${device.id}`;

@@ -4,13 +4,7 @@ import argparse
 import uinput
 import websockets
 
-
-SERVER_HOST = "localhost"
-SERVER_PORT = 8000
-SECURE = False
-SERVER_HTTP = f"http{"s" if SECURE else ""}://{SERVER_HOST}:{SERVER_PORT}"
-SERVER_WS = f"ws{"s" if SECURE else ""}://{SERVER_HOST}:{SERVER_PORT}/ws/output"
-
+# Map button names from semantic codes to uinput codes
 SEMANTIC_TO_UINPUT = {
     "BTN_DPAD_UP": uinput.BTN_DPAD_UP,
     "BTN_DPAD_DOWN": uinput.BTN_DPAD_DOWN,
@@ -27,6 +21,8 @@ SEMANTIC_TO_UINPUT = {
 
 
 class UInputController:
+    """Wrapper around uinput to send virtual gamepad events."""
+
     def __init__(self):
         self.device = uinput.Device(
             events=tuple(SEMANTIC_TO_UINPUT.values()),
@@ -42,18 +38,35 @@ class UInputController:
         print(f"Emitted: {button_name} -> {state}")
 
 
-async def start_server(group_id: str, output_id: str | None):
-    uri = f"{SERVER_WS}?group_id={group_id}"
+async def start_output_client(server_host: str, server_port: int, secure: bool,
+                              group_id: str, output_id: str | None, name: str | None):
+    scheme_http = "https" if secure else "http"
+    scheme_ws = "wss" if secure else "ws"
+
+    server_http = f"{scheme_http}://{server_host}:{server_port}"
+    server_ws = f"{scheme_ws}://{server_host}:{server_port}/ws/output"
+
+    uri = f"{server_ws}?group_id={group_id}"
     if output_id:
         uri += f"&output_id={output_id}"
+
     async with websockets.connect(uri) as ws:
+        # First message should be the config from server
         msg = await ws.recv()
         data: dict[str, str] = json.loads(msg)
         if data.get("type") != "config":
             print("Unexpected initial message:", data)
         print(f"Connected as output {data['output_id']} in group {data['group_id']}")
-        print(f'Available buttons: {", ".join(SEMANTIC_TO_UINPUT.keys())}')
-        print(f'Open {SERVER_HTTP}/?group_id={group_id} to join group {group_id}')
+        print(f"Available buttons: {', '.join(SEMANTIC_TO_UINPUT.keys())}")
+        print(f"Open {server_http}/?group-id={group_id} to join group {group_id}")
+
+        # Send initial name if provided
+        if name:
+            await ws.send(json.dumps({
+                "type": "rename_output",
+                "output_id": data['output_id'],
+                "name": name
+            }))
 
         ui = UInputController()
 
@@ -63,12 +76,30 @@ async def start_server(group_id: str, output_id: str | None):
                 data = json.loads(msg)
                 if data.get("type") == "key_event":
                     ui.emit(data.get("code"), int(data.get("state", 0)))
+
+                elif data.get("type") == "rename_output":
+                    # Server tells us our name changed
+                    print(f"[INFO] Output device renamed to: {data.get('name')}")
+
         except websockets.ConnectionClosed:
             print("Disconnected from server.")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--group", help="Group ID to join", required=True)
+    parser.add_argument("--host", default="localhost", help="Server hostname")
+    parser.add_argument("--port", type=int, default=8000, help="Server port")
+    parser.add_argument("--secure", action="store_true", help="Use HTTPS/WSS")
+    parser.add_argument("--group", required=True, help="Group ID to join")
     parser.add_argument("--id", help="Output ID (optional)", default=None)
+    parser.add_argument("--name", help="Output device display name", default=None)
     args = parser.parse_args()
-    asyncio.run(start_server(args.group, args.id))
+
+    asyncio.run(start_output_client(
+        server_host=args.host,
+        server_port=args.port,
+        secure=args.secure,
+        group_id=args.group,
+        output_id=args.id,
+        name=args.name
+    ))
