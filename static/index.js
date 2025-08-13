@@ -303,7 +303,7 @@ function handleLeaveGroupButton(event) {
   joinBtn.addEventListener("click", handleJoinGroupButton);
 }
 
-function removeGroupIdFromURL(event) {
+function removeGroupIdFromURL() {
   const url = new URL(window.location.href);
   const params = new URLSearchParams(url.search);
   const urlGroupId = params.get("group_id");
