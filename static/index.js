@@ -104,15 +104,18 @@ function connectToGroup(new_group_id) {
 }
 
 // ==== Event Sending ====
-function sendButtonEvent(code, state) {
+function sendButtonEvent(event, state) {
+  // do not toggle, when editing device name
+  if (event.target.contentEditable === "true") return;
+
   if (!selectedOutput) return;
-  const btn = KEY_TO_BUTTON[code];
+  const btn = KEY_TO_BUTTON[event.code];
   if (!btn) return;
   websocket.send(JSON.stringify({ type: "keypress", code: btn, state }));
 }
 
-document.addEventListener("keydown", (event) => sendButtonEvent(event.code, 1));
-document.addEventListener("keyup", (event) => sendButtonEvent(event.code, 0));
+document.addEventListener("keydown", (event) => sendButtonEvent(event, 1));
+document.addEventListener("keyup", (event) => sendButtonEvent(event, 0));
 
 // ==== UI Rendering ====
 function renderInputClients() {
@@ -158,24 +161,75 @@ function renderOutputDevices() {
     const body = document.createElement("div");
     body.className = "card-body";
 
+    // Editable title
+    const titleWrapper = document.createElement("div");
+    titleWrapper.style.display = "flex";
+    titleWrapper.style.alignItems = "center";
+    titleWrapper.style.gap = "0.5rem";
+    titleWrapper.style.width = "100%";
+
     const title = document.createElement("h6");
-    title.className = "fw-bold";
+    title.className = "fw-bold mb-0";
     title.contentEditable = "true";
     title.textContent = device.name;
+    title.style.flex = "1";
+    title.style.minWidth = "0";
+    title.classList.add("w-100");
 
-    function updateDeviceName(event) {
-      device.name = event.target.textContent;
-      if (websocket && websocket.readyState === WebSocket.OPEN) {
-        websocket.send(
-          JSON.stringify({
-            type: "rename_output",
-            output_id: device.id,
-            name: device.name,
-          })
-        );
+    let originalName = device.name;
+
+    const saveBtn = document.createElement("button");
+    saveBtn.textContent = "✔";
+    saveBtn.className = "btn btn-sm btn-success";
+    saveBtn.style.display = "none"; // only visible when name changes
+    saveBtn.style.flexShrink = "0";
+
+    function updateSaveButtonVisibility(event) {
+      if (title.textContent.trim() !== originalName) {
+        saveBtn.style.display = "inline-block";
+      } else {
+        saveBtn.style.display = "none";
       }
     }
-    title.addEventListener("input", updateDeviceName);
+
+    function sendNameUpdate() {
+      const newName = title.textContent.trim();
+      if (newName && newName !== originalName) {
+        originalName = newName;
+        saveBtn.style.display = "none";
+        device.name = newName;
+
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          websocket.send(
+            JSON.stringify({
+              type: "rename_output",
+              output_id: device.id,
+              name: newName,
+            })
+          );
+        }
+      }
+    }
+
+    title.addEventListener("input", updateSaveButtonVisibility);
+
+    // Save on Enter
+    title.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault(); // prevent new line
+        sendNameUpdate();
+        title.blur(); // optional: remove focus
+      }
+    });
+
+    // Save on button click
+    saveBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      sendNameUpdate();
+    });
+
+    titleWrapper.appendChild(title);
+    titleWrapper.appendChild(saveBtn);
 
     const idInfo = document.createElement("p");
     idInfo.className = "text-muted";
@@ -205,7 +259,7 @@ function renderOutputDevices() {
     });
 
     clientsDiv.appendChild(clientsList);
-    body.append(title, idInfo, btn, clientsDiv);
+    body.append(titleWrapper, idInfo, btn, clientsDiv);
     card.appendChild(body);
     col.appendChild(card);
     outputDevicesContainer.appendChild(col);
