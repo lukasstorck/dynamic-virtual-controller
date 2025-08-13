@@ -275,6 +275,32 @@ function handleJoinGroupButton(event) {
     groupIdInput.value.trim() ||
     `group_${crypto.randomUUID().replaceAll("-", "")}`;
   connectToGroup(group_id);
+
+  // Swap button to "Leave Group"
+  joinBtn.textContent = "Leave Group";
+  joinBtn.className = "btn btn-outline-danger";
+  joinBtn.removeEventListener("click", handleJoinGroupButton);
+  joinBtn.addEventListener("click", handleLeaveGroupButton);
+}
+
+function handleLeaveGroupButton(event) {
+  event.preventDefault();
+  if (websocket) {
+    websocket.close();
+    websocket = null;
+  }
+
+  groupId = null;
+  inputClients = [];
+  outputDevices = [];
+  renderInputClients();
+  renderOutputDevices();
+
+  // Swap button back to "Join Group"
+  joinBtn.textContent = "Join Group";
+  joinBtn.className = "btn btn-primary";
+  joinBtn.removeEventListener("click", handleLeaveGroupButton);
+  joinBtn.addEventListener("click", handleJoinGroupButton);
 }
 
 function removeGroupIdFromURL(event) {
