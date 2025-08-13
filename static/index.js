@@ -27,9 +27,9 @@ const joinBtn = document.getElementById("join-btn");
 const nameInput = document.getElementById("name");
 const colorInput = document.getElementById("color");
 const groupIdInput = document.getElementById("group-id");
-const clientsTableBody = document.querySelector("#clients-table-body");
-const outputDevicesContainer = document.querySelector(
-  "#output-devices-container"
+const clientsTableBody = document.getElementById("clients-table-body");
+const outputDevicesContainer = document.getElementById(
+  "output-devices-container"
 );
 
 // ==== WebSocket Connection ====
