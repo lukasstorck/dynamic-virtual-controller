@@ -18,6 +18,7 @@ const KEY_TO_BUTTON = {
 let websocket = null;
 let selectedOutput = null;
 let groupId = null;
+let inputClientId = null;
 let currentUser = null;
 let inputClients = [];
 let outputDevices = [];
@@ -68,6 +69,7 @@ function connectToGroup(new_group_id) {
 
     if (data.type === "config") {
       groupId = data.group_id;
+      inputClientId = data.input_client_id;
       activeGroupIdElement.textContent = groupId;
       joinContainer.classList.add("d-none");
       leaveContainer.classList.remove("d-none");
@@ -90,7 +92,7 @@ function connectToGroup(new_group_id) {
       }));
 
       const currentClient = inputClients.find(
-        (inputClient) => inputClient.name === currentUser
+        (inputClient) => inputClient.id === inputClientId
       );
       selectedOutput = currentClient
         ? currentClient.devices[0] || null
@@ -99,7 +101,7 @@ function connectToGroup(new_group_id) {
       renderInputClients();
       renderOutputDevices();
     } else if (data.type === "output_selected") {
-      selectedOutput = data.output_id || null;
+      selectedOutput = data.id || null;
     }
   };
 }
