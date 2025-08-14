@@ -165,7 +165,12 @@ function renderUsers() {
     tdActivity.textContent = user.lastActivity;
 
     const tdDevices = document.createElement("td");
-    tdDevices.textContent = user.devices.join(", ");
+    tdDevices.textContent = user.devices
+      .map(
+        (deviceId) =>
+          outputDevices.find((device) => device.id === deviceId)?.name
+      )
+      .join(", ");
 
     tr.append(tdName, tdActivity, tdDevices);
     usersTableBody.appendChild(tr);
