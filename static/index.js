@@ -349,13 +349,12 @@ leaveBtn.addEventListener("click", handleLeaveGroupButton);
 copyLinkBtn.addEventListener("click", handleCopyGroupLinkButton);
 
 window.addEventListener("DOMContentLoaded", () => {
+  const storedUserName = localStorage.getItem("dvc_name");
+  const storedUserColor = localStorage.getItem("dvc_color");
   currentUser =
-    nameInput.value.trim() ||
-    localStorage.getItem("dvc_name").trim() ||
-    `User-${crypto.randomUUID().slice(0, 4)}`;
+    storedUserName.trim() || `User-${crypto.randomUUID().slice(0, 4)}`;
   nameInput.value = currentUser;
-  currentColor =
-    colorInput.value || localStorage.getItem("dvc_color") || "#ff6f61";
+  currentColor = storedUserColor || "#ff6f61";
   colorInput.value = currentColor;
   removeGroupIdFromURL();
 });
