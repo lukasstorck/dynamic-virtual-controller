@@ -104,6 +104,16 @@ function connectToGroup(new_group_id) {
       selectedOutput = data.id || null;
     }
   };
+
+  websocket.onclose = () => {
+    console.warn("WebSocket closed");
+    handleLeaveGroupButton(new Event("server-disconnect"));
+  };
+
+  websocket.onerror = (error) => {
+    console.error("WebSocket error", error);
+    handleLeaveGroupButton(new Event("server-disconnect"));
+  };
 }
 
 // ==== Event Sending ====
