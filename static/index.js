@@ -19,7 +19,7 @@ let websocket = null;
 let selectedOutput = null;
 let groupId = null;
 let userId = null;
-let selectedUserName = null;
+let userName = null;
 let users = [];
 let outputDevices = [];
 
@@ -46,16 +46,16 @@ const outputDevicesContainer = document.getElementById(
 
 // ==== WebSocket Connection ====
 function updateUserData(event = null) {
-  selectedUserName = nameInput.value.trim() || selectedUserName;
+  userName = nameInput.value.trim() || userName;
   const currentColor = colorInput.value;
-  localStorage.setItem("dvc_name", selectedUserName);
+  localStorage.setItem("dvc_name", userName);
   localStorage.setItem("dvc_color", currentColor);
 
   if (websocket && websocket.readyState === WebSocket.OPEN) {
     websocket.send(
       JSON.stringify({
         type: "register",
-        name: selectedUserName,
+        name: userName,
         color: currentColor,
       })
     );
@@ -388,9 +388,8 @@ copyLinkBtn.addEventListener("click", handleCopyGroupLinkButton);
 window.addEventListener("DOMContentLoaded", () => {
   const storedUserName = localStorage.getItem("dvc_name") || "";
   const storedUserColor = localStorage.getItem("dvc_color");
-  selectedUserName =
-    storedUserName.trim() || `User-${crypto.randomUUID().slice(0, 4)}`;
-  nameInput.value = selectedUserName;
+  userName = storedUserName.trim() || `User-${crypto.randomUUID().slice(0, 4)}`;
+  nameInput.value = userName;
   colorInput.value = storedUserColor || "#ff6f61";
   removeGroupIdFromURL();
 });
