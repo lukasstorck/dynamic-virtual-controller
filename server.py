@@ -58,7 +58,7 @@ class Group:
         output_devices = []
         for output_device in self.output_devices.values():
             connected = [
-                user.name
+                user.id
                 for user in self.users.values()
                 if user.selected_output == output_device.id
             ]

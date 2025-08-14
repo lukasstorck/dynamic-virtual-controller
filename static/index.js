@@ -283,16 +283,16 @@ function renderOutputDevices() {
     usersDiv.appendChild(strong);
 
     const userList = document.createElement("div");
-    device.connectedUsers.forEach((connectedUserName) => {
-      const userData = users.find((user) => user.name === connectedUserName);
+    device.connectedUsers.forEach((connectedUserId) => {
+      const userData = users.find((user) => user.id === connectedUserId);
       const tag = document.createElement("span");
       tag.className = "user-tag";
       tag.style.backgroundColor = userData?.color || "#ccc";
 
       if (userData?.id === userId) {
-        tag.textContent = `${connectedUserName} (You)`;
+        tag.textContent = `${userData.name} (You)`;
       } else {
-        tag.textContent = connectedUserName;
+        tag.textContent = userData.name;
       }
 
       userList.appendChild(tag);
