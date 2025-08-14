@@ -266,9 +266,7 @@ function toggleDeviceConnection(event, deviceId) {
 
   if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
   const newTarget = selectedOutput === deviceId ? null : deviceId;
-  websocket.send(
-    JSON.stringify({ type: "select_output", id: newTarget })
-  );
+  websocket.send(JSON.stringify({ type: "select_output", id: newTarget }));
 }
 
 // ==== Initial Load ====
