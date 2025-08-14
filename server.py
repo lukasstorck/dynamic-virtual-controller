@@ -157,6 +157,13 @@ async def ws_input(websocket: WebSocket):
                 new_name = data.get('name')
                 if target in group.output_devices and isinstance(new_name, str):
                     group.output_devices[target].name = new_name
+                    output_websocket = group.output_devices[target].websocket
+
+                    await output_websocket.send_text(json.dumps({
+                        'type': 'rename_output',
+                        'name': new_name,
+                    }))
+
                     await group.broadcast_group_state()
 
             await group.broadcast_group_state()
