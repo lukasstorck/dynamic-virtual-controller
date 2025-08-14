@@ -62,9 +62,9 @@ function updateUserData(event = null) {
 function connectToGroup(new_group_id) {
   // close previous connection, if there is one
   if (websocket) websocket.close();
-  websocket = new WebSocket(
-    `ws://${window.location.host}/ws/input?group_id=${new_group_id}`
-  );
+  let url = `ws://${window.location.host}/ws/input`;
+  if (new_group_id) url += `?group_id=${new_group_id}`;
+  websocket = new WebSocket(url);
 
   websocket.onmessage = (event) => {
     const data = JSON.parse(event.data);
