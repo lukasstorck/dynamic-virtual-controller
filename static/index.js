@@ -36,7 +36,10 @@ const copyLinkBtn = document.getElementById("copy-link-btn");
 const copyLinkBtnOriginalText = copyLinkBtn.textContent;
 const activeGroupIdElement = document.getElementById("active-group-id");
 
+const noClientsElement = document.getElementById("no-clients");
+const clientsTableWrapper = document.getElementById("clients-table-wrapper");
 const clientsTableBody = document.getElementById("clients-table-body");
+const noDevicesElement = document.getElementById("no-devices");
 const outputDevicesContainer = document.getElementById(
   "output-devices-container"
 );
@@ -134,9 +137,18 @@ function sendButtonEvent(event, state) {
 document.addEventListener("keydown", (event) => sendButtonEvent(event, 1));
 document.addEventListener("keyup", (event) => sendButtonEvent(event, 0));
 
-// ==== UI Rendering ====
 function renderInputClients() {
   clientsTableBody.innerHTML = "";
+
+  if (inputClients.length === 0) {
+    clientsTableWrapper.classList.add("d-none");
+    noClientsElement.classList.remove("d-none");
+    return;
+  } else {
+    clientsTableWrapper.classList.remove("d-none");
+    noClientsElement.classList.add("d-none");
+  }
+
   inputClients.forEach((client) => {
     const tr = document.createElement("tr");
 
@@ -166,6 +178,16 @@ function renderInputClients() {
 
 function renderOutputDevices() {
   outputDevicesContainer.innerHTML = "";
+
+  if (outputDevices.length === 0) {
+    outputDevicesContainer.classList.add("d-none");
+    noDevicesElement.classList.remove("d-none");
+    return;
+  } else {
+    outputDevicesContainer.classList.remove("d-none");
+    noDevicesElement.classList.add("d-none");
+  }
+
   outputDevices.forEach((device) => {
     const col = document.createElement("div");
     col.className = "col-md-4 col-lg-3";

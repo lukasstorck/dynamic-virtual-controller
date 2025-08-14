@@ -49,22 +49,38 @@
                 <!-- Connected Input Clients -->
                 <div class="card p-3 shadow-sm mb-4">
                     <h5>Connected Input Clients</h5>
-                    <table class="table table-bordered align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Name</th>
-                                <th>Last Activity</th>
-                                <th>Connected Output Devices</th>
-                            </tr>
-                        </thead>
-                        <tbody id="clients-table-body"></tbody>
-                    </table>
+
+                    <!-- Empty state -->
+                    <div id="no-clients" class="text-center text-muted py-3">
+                        No input clients connected
+                    </div>
+
+                    <!-- Clients table -->
+                    <div id="clients-table-wrapper" class="d-none">
+                        <table class="table table-bordered align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Last Activity</th>
+                                    <th>Connected Output Devices</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clients-table-body"></tbody>
+                        </table>
+                    </div>
                 </div>
 
-                <!-- Output Devices -->
+                <!-- Connected Output Devices -->
                 <div class="card p-3 shadow-sm mb-4">
                     <h5>Connected Output Devices</h5>
-                    <div id="output-devices-container" class="row g-3"></div>
+
+                    <!-- Empty state -->
+                    <div id="no-devices" class="text-center text-muted py-3">
+                        No output devices connected
+                    </div>
+
+                    <!-- Devices grid -->
+                    <div id="output-devices-container" class="row g-3 d-none"></div>
                 </div>
 
             </div>
