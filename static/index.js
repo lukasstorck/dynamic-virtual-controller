@@ -32,6 +32,8 @@ const joinContainer = document.getElementById("join-group-container");
 const leaveContainer = document.getElementById("leave-group-container");
 const joinBtn = document.getElementById("join-btn");
 const leaveBtn = document.getElementById("leave-btn");
+const copyLinkBtn = document.getElementById("copy-link-btn");
+const copyLinkBtnOriginalText = copyLinkBtn.textContent;
 const activeGroupIdElement = document.getElementById("active-group-id");
 
 const clientsTableBody = document.getElementById("clients-table-body");
@@ -307,6 +309,26 @@ function handleLeaveGroupButton(event) {
   leaveContainer.classList.add("d-none");
 }
 
+function handleCopyGroupLinkButton(event) {
+  event.preventDefault();
+  if (!groupId) return;
+
+  const groupLink = `${window.location.origin}?group_id=${groupId}`;
+  const copiedText = "Copied!";
+
+  navigator.clipboard
+    .writeText(groupLink)
+    .then(() => {
+      copyLinkBtn.textContent = copiedText;
+      setTimeout(() => {
+        copyLinkBtn.textContent = copyLinkBtnOriginalText;
+      }, 1500);
+    })
+    .catch((err) => {
+      console.error("Failed to copy: ", err);
+    });
+}
+
 function removeGroupIdFromURL() {
   const url = new URL(window.location.href);
   const params = new URLSearchParams(url.search);
@@ -324,6 +346,8 @@ nameInput.addEventListener("input", updateUserData);
 colorInput.addEventListener("input", updateUserData);
 joinBtn.addEventListener("click", handleJoinGroupButton);
 leaveBtn.addEventListener("click", handleLeaveGroupButton);
+copyLinkBtn.addEventListener("click", handleCopyGroupLinkButton);
+
 window.addEventListener("DOMContentLoaded", () => {
   currentUser =
     nameInput.value.trim() ||
