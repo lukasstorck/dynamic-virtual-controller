@@ -156,7 +156,8 @@ async def ws_input(websocket: WebSocket):
                 target = data.get('id')
                 new_name = data.get('name')
                 if target in group.output_devices and isinstance(new_name, str):
-                    group.output_devices[target].name = new_name
+                    old_name = group.output_devices[target].name
+                    group.output_devices[target].name = new_name.strip() or old_name
                     output_websocket = group.output_devices[target].websocket
 
                     await output_websocket.send_text(json.dumps({

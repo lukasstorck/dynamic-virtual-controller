@@ -198,6 +198,13 @@ function renderOutputDevices() {
 
     function sendNameUpdate() {
       const newName = title.textContent.trim();
+      if (!newName) {
+        // do not accept empty name
+        title.textContent = device.name;
+        saveBtn.style.display = "none";
+        return;
+      }
+
       if (newName && newName !== originalName) {
         originalName = newName;
         saveBtn.style.display = "none";
@@ -317,20 +324,6 @@ function removeGroupIdFromURL() {
   if (groupId) connectToGroup(groupId);
 }
 
-function loadDataFromLocalStorage() {
-  const savedName = localStorage.getItem("dvc_name");
-  const savedColor = localStorage.getItem("dvc_color");
-
-  if (savedName) {
-    nameInput.value = savedName;
-    currentUser = savedName;
-  }
-  if (savedColor) {
-    colorInput.value = savedColor;
-    currentColor = savedColor;
-  }
-}
-
 nameInput.addEventListener("input", updateUserData);
 colorInput.addEventListener("input", updateUserData);
 joinBtn.addEventListener("click", handleJoinGroupButton);
@@ -338,10 +331,11 @@ leaveBtn.addEventListener("click", handleLeaveGroupButton);
 window.addEventListener("DOMContentLoaded", () => {
   currentUser =
     nameInput.value.trim() ||
-    localStorage.getItem("dvc_name") ||
+    localStorage.getItem("dvc_name").trim() ||
     `User-${crypto.randomUUID().slice(0, 4)}`;
+  nameInput.value = currentUser;
   currentColor =
     colorInput.value || localStorage.getItem("dvc_color") || "#ff6f61";
+  colorInput.value = currentColor;
   removeGroupIdFromURL();
-  loadDataFromLocalStorage();
 });
