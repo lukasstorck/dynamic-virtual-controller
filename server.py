@@ -103,7 +103,7 @@ async def index():
 async def ws_input(websocket: WebSocket):
     await websocket.accept()
     query = websocket.query_params
-    group_id = query.get('group_id') or f'group_{uuid.uuid4().hex}'
+    group_id = query.get('group_id') or uuid.uuid4().hex
     input_client_id = query.get('input_id') or f'input_{uuid.uuid4().hex[:4]}'
 
     group = await get_group(group_id)
@@ -165,7 +165,7 @@ async def ws_input(websocket: WebSocket):
 async def ws_output(websocket: WebSocket):
     await websocket.accept()
     query = websocket.query_params
-    group_id = query.get('group_id') or f'group_{uuid.uuid4().hex}'
+    group_id = query.get('group_id') or uuid.uuid4().hex
     output_id = query.get('output_id') or f'output_{uuid.uuid4().hex[:4]}'
     output_name = query.get('name') or output_id
 

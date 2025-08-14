@@ -272,8 +272,7 @@ function toggleDeviceConnection(event, deviceId) {
 function handleJoinGroupButton(event) {
   event.preventDefault();
   const group_id =
-    groupIdInput.value.trim() ||
-    `group_${crypto.randomUUID().replaceAll("-", "")}`;
+    groupIdInput.value.trim() || crypto.randomUUID().replaceAll("-", "");
   connectToGroup(group_id);
 
   // Swap button to "Leave Group"
