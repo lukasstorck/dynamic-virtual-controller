@@ -98,6 +98,11 @@ async def index():
     return FileResponse(static_dir / 'index.html')
 
 
+@app.get('/favicon.ico')
+async def favicon():
+    return FileResponse(static_dir / 'favicon.ico')
+
+
 # === Input WebSocket ===
 @app.websocket('/ws/input')
 async def ws_input(websocket: WebSocket):
