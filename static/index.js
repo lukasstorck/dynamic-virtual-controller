@@ -74,7 +74,7 @@ function connectToGroup(new_group_id) {
       updateUserData();
     } else if (data.type === "group_state") {
       inputClients = (data.input_clients || []).map((inputClient) => ({
-        id: inputClient.input_id,
+        id: inputClient.id,
         name: inputClient.name,
         color: inputClient.color,
         lastActivity: inputClient.lastActivity,
@@ -84,7 +84,7 @@ function connectToGroup(new_group_id) {
       }));
 
       outputDevices = (data.output_devices || []).map((outputDevice) => ({
-        id: outputDevice.output_id,
+        id: outputDevice.id,
         name: outputDevice.name,
         connectedClients: outputDevice.connected_inputs || [],
       }));
@@ -195,7 +195,7 @@ function renderOutputDevices() {
           websocket.send(
             JSON.stringify({
               type: "rename_output",
-              output_id: device.id,
+              id: device.id,
               name: newName,
             })
           );
@@ -265,7 +265,7 @@ function toggleDeviceConnection(event, deviceId) {
   if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
   const newTarget = selectedOutput === deviceId ? null : deviceId;
   websocket.send(
-    JSON.stringify({ type: "select_output", output_id: newTarget })
+    JSON.stringify({ type: "select_output", id: newTarget })
   );
 }
 

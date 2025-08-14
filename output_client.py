@@ -38,8 +38,13 @@ class UInputController:
         print(f"Emitted: {button_name} -> {state}")
 
 
-async def start_output_client(server_host: str, server_port: int, secure: bool,
-                              group_id: str, output_id: str | None, name: str | None):
+async def start_output_client(
+    server_host: str,
+    server_port: int,
+    secure: bool,
+    group_id: str,
+    name: str | None
+):
     scheme_http = "https" if secure else "http"
     scheme_ws = "wss" if secure else "ws"
 
@@ -47,33 +52,25 @@ async def start_output_client(server_host: str, server_port: int, secure: bool,
     server_ws = f"{scheme_ws}://{server_host}:{server_port}/ws/output"
 
     uri = f"{server_ws}?group_id={group_id}"
-    if output_id:
-        uri += f"&output_id={output_id}"
+    if name:
+        uri += f"&name={name}"
 
     async with websockets.connect(uri) as ws:
         # First message should be the config from server
-        msg = await ws.recv()
-        data: dict[str, str] = json.loads(msg)
+        message = await ws.recv()
+        data: dict[str, str] = json.loads(message)
         if data.get("type") != "config":
             print("Unexpected initial message:", data)
-        print(f"Connected as output {data['output_id']} in group {data['group_id']}")
+        print(f"Connected as output {data['output_device_name']} in group {data['group_id']}")
         print(f"Available buttons: {', '.join(SEMANTIC_TO_UINPUT.keys())}")
         print(f"Open {server_http}/?group-id={group_id} to join group {group_id}")
-
-        # Send initial name if provided
-        if name:
-            await ws.send(json.dumps({
-                "type": "rename_output",
-                "output_id": data['output_id'],
-                "name": name
-            }))
 
         ui = UInputController()
 
         try:
             while True:
-                msg = await ws.recv()
-                data = json.loads(msg)
+                message = await ws.recv()
+                data = json.loads(message)
                 if data.get("type") == "key_event":
                     ui.emit(data.get("code"), int(data.get("state", 0)))
 
@@ -91,7 +88,6 @@ if __name__ == "__main__":
     parser.add_argument("--port", type=int, default=8000, help="Server port")
     parser.add_argument("--secure", action="store_true", help="Use HTTPS/WSS")
     parser.add_argument("--group", required=True, help="Group ID to join")
-    parser.add_argument("--id", help="Output ID (optional)", default=None)
     parser.add_argument("--name", help="Output device display name", default=None)
     args = parser.parse_args()
 
@@ -100,6 +96,5 @@ if __name__ == "__main__":
         server_port=args.port,
         secure=args.secure,
         group_id=args.group,
-        output_id=args.id,
         name=args.name
     ))
