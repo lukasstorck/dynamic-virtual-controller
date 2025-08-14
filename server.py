@@ -109,6 +109,12 @@ async def ws_input(websocket: WebSocket):
     group = await get_group(group_id)
     group.input_clients[input_client_id] = InputClient(input_client_id, websocket)
 
+    await websocket.send_text(json.dumps({
+        "type": "config",
+        "input_id": input_client_id,
+        "group_id": group_id
+    }))
+
     try:
         await group.broadcast_group_state()
 

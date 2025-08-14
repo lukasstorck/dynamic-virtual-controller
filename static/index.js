@@ -23,10 +23,16 @@ let inputClients = [];
 let outputDevices = [];
 
 // ==== DOM Elements ====
-const joinBtn = document.getElementById("join-btn");
 const nameInput = document.getElementById("name");
 const colorInput = document.getElementById("color");
 const groupIdInput = document.getElementById("group-id");
+
+const joinContainer = document.getElementById("join-group-container");
+const leaveContainer = document.getElementById("leave-group-container");
+const joinBtn = document.getElementById("join-btn");
+const leaveBtn = document.getElementById("leave-btn");
+const activeGroupIdElement = document.getElementById("active-group-id");
+
 const clientsTableBody = document.getElementById("clients-table-body");
 const outputDevicesContainer = document.getElementById(
   "output-devices-container"
@@ -57,21 +63,16 @@ function connectToGroup(new_group_id) {
     `ws://${window.location.host}/ws/input?group_id=${new_group_id}`
   );
 
-  websocket.onopen = () => {
-    currentUser =
-      nameInput.value.trim() ||
-      localStorage.getItem("dvc_name") ||
-      `User-${crypto.randomUUID().slice(0, 4)}`;
-    currentColor =
-      colorInput.value || localStorage.getItem("dvc_color") || "#ff6f61";
-    groupId = new_group_id;
-    updateUserData();
-  };
-
   websocket.onmessage = (event) => {
     const data = JSON.parse(event.data);
 
-    if (data.type === "group_state") {
+    if (data.type === "config") {
+      groupId = data.group_id;
+      activeGroupIdElement.textContent = groupId;
+      joinContainer.classList.add("d-none");
+      leaveContainer.classList.remove("d-none");
+      updateUserData();
+    } else if (data.type === "group_state") {
       inputClients = (data.input_clients || []).map((inputClient) => ({
         id: inputClient.input_id,
         name: inputClient.name,
@@ -271,15 +272,8 @@ function toggleDeviceConnection(event, deviceId) {
 // ==== Initial Load ====
 function handleJoinGroupButton(event) {
   event.preventDefault();
-  const group_id =
-    groupIdInput.value.trim() || crypto.randomUUID().replaceAll("-", "");
-  connectToGroup(group_id);
-
-  // Swap button to "Leave Group"
-  joinBtn.textContent = "Leave Group";
-  joinBtn.className = "btn btn-outline-danger";
-  joinBtn.removeEventListener("click", handleJoinGroupButton);
-  joinBtn.addEventListener("click", handleLeaveGroupButton);
+  const group_id = groupIdInput.value.trim();
+  connectToGroup(group_id || null);
 }
 
 function handleLeaveGroupButton(event) {
@@ -290,25 +284,23 @@ function handleLeaveGroupButton(event) {
   }
 
   groupId = null;
+  activeGroupIdElement.textContent = "";
   inputClients = [];
   outputDevices = [];
   renderInputClients();
   renderOutputDevices();
 
-  // Swap button back to "Join Group"
-  joinBtn.textContent = "Join Group";
-  joinBtn.className = "btn btn-primary";
-  joinBtn.removeEventListener("click", handleLeaveGroupButton);
-  joinBtn.addEventListener("click", handleJoinGroupButton);
+  joinContainer.classList.remove("d-none");
+  leaveContainer.classList.add("d-none");
 }
 
 function removeGroupIdFromURL() {
   const url = new URL(window.location.href);
   const params = new URLSearchParams(url.search);
   const urlGroupId = params.get("group_id");
+  if (urlGroupId === null) return;
   groupId = urlGroupId.trim();
 
-  params.delete("group_id");
   const newUrl = `${url.origin}${url.pathname}`;
   window.history.replaceState({}, document.title, newUrl);
 
@@ -332,7 +324,14 @@ function loadDataFromLocalStorage() {
 nameInput.addEventListener("input", updateUserData);
 colorInput.addEventListener("input", updateUserData);
 joinBtn.addEventListener("click", handleJoinGroupButton);
+leaveBtn.addEventListener("click", handleLeaveGroupButton);
 window.addEventListener("DOMContentLoaded", () => {
+  currentUser =
+    nameInput.value.trim() ||
+    localStorage.getItem("dvc_name") ||
+    `User-${crypto.randomUUID().slice(0, 4)}`;
+  currentColor =
+    colorInput.value || localStorage.getItem("dvc_color") || "#ff6f61";
   removeGroupIdFromURL();
   loadDataFromLocalStorage();
 });

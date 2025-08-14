@@ -14,21 +14,30 @@
             <!-- Sidebar -->
             <div class="col-md-3">
                 <div class="card p-3 shadow-sm mb-4">
-                    <h5 class="mb-3">Join / Create Group</h5>
+                    <h5 class="mb-3">Settings</h5>
                     <div class="mb-3">
-                        <label for="name" class="form-label">Your Name (optional)</label>
+                        <label for="name" class="form-label">Name</label>
                         <input id="name" type="text" class="form-control" placeholder="Enter your name">
                     </div>
                     <div class="mb-3">
-                        <label for="color" class="form-label">Your Color</label>
+                        <label for="color" class="form-label">Color</label>
                         <input id="color" type="color" class="form-control form-control-color" value="#ff6f61"
                             title="Choose your color">
                     </div>
-                    <div class="mb-3">
-                        <label for="group-id" class="form-label">Group ID (leave blank to create new)</label>
-                        <input id="group-id" type="text" class="form-control" placeholder="Enter group ID">
+                    <div id="join-group-container">
+                        <div class="mb-3">
+                            <label for="group-id" class="form-label">Group ID (leave blank to create new)</label>
+                            <input id="group-id" type="text" class="form-control" placeholder="Enter group ID">
+                        </div>
+                        <button id="join-btn" class="btn btn-primary w-100">Join Group</button>
                     </div>
-                    <button id="join-btn" class="btn btn-primary w-100">Join Group</button>
+                    <div id="leave-group-container" class="d-none">
+                        <div class="mb-2">
+                            <small class="text-muted">Group ID:</small>
+                            <div id="active-group-id" class="fw-bold text-break"></div>
+                        </div>
+                        <button id="leave-btn" class="btn btn-outline-danger w-100">Leave Group</button>
+                    </div>
                 </div>
             </div>
 
