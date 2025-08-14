@@ -24,7 +24,7 @@ let inputClients = [];
 let outputDevices = [];
 
 // ==== DOM Elements ====
-const nameInput = document.getElementById("name");
+const nameInput = document.getElementById("user-name");
 const colorInput = document.getElementById("color");
 const groupIdInput = document.getElementById("group-id");
 
@@ -142,7 +142,13 @@ function renderInputClients() {
     const tag = document.createElement("span");
     tag.className = "client-tag";
     tag.style.backgroundColor = client.color || "#ccc";
-    tag.textContent = client.name;
+
+    if (client.id === inputClientId) {
+      tag.textContent = `${client.name} (You)`;
+    } else {
+      tag.textContent = client.name;
+    }
+
     tdName.appendChild(tag);
 
     const tdActivity = document.createElement("td");
@@ -258,11 +264,19 @@ function renderOutputDevices() {
 
     const clientsList = document.createElement("div");
     device.connectedClients.forEach((clientName) => {
-      const clientData = inputClients.find((c) => c.name === clientName);
+      const clientData = inputClients.find(
+        (inputClient) => inputClient.name === clientName
+      );
       const tag = document.createElement("span");
       tag.className = "client-tag";
       tag.style.backgroundColor = clientData?.color || "#ccc";
-      tag.textContent = clientName;
+
+      if (clientData?.id === inputClientId) {
+        tag.textContent = `${clientName} (You)`;
+      } else {
+        tag.textContent = clientName;
+      }
+
       clientsList.appendChild(tag);
     });
 
