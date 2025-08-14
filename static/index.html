@@ -46,17 +46,17 @@
             <div class="col-md-9">
                 <h1 class="mb-4 text-center">Dynamic Virtual Controller</h1>
 
-                <!-- Connected Input Clients -->
+                <!-- Connected Users -->
                 <div class="card p-3 shadow-sm mb-4">
-                    <h5>Connected Input Clients</h5>
+                    <h5>Connected Users</h5>
 
                     <!-- Empty state -->
-                    <div id="no-clients" class="text-center text-muted py-3">
-                        No input clients connected
+                    <div id="no-users-wrapper" class="text-center text-muted py-3">
+                        No users connected
                     </div>
 
-                    <!-- Clients table -->
-                    <div id="clients-table-wrapper" class="d-none">
+                    <!-- Users table -->
+                    <div id="users-table-wrapper" class="d-none">
                         <table class="table table-bordered align-middle">
                             <thead class="table-light">
                                 <tr>
@@ -65,7 +65,7 @@
                                     <th>Connected Output Devices</th>
                                 </tr>
                             </thead>
-                            <tbody id="clients-table-body"></tbody>
+                            <tbody id="users-table-body"></tbody>
                         </table>
                     </div>
                 </div>
@@ -75,7 +75,7 @@
                     <h5>Connected Output Devices</h5>
 
                     <!-- Empty state -->
-                    <div id="no-devices" class="text-center text-muted py-3">
+                    <div id="no-devices-wrapper" class="text-center text-muted py-3">
                         No output devices connected
                     </div>
 

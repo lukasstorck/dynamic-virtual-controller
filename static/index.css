@@ -1,5 +1,5 @@
-/* Simple color tags for client labels */
-.client-tag {
+/* Simple color tags for user labels */
+.user-tag {
     display: inline-block;
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;

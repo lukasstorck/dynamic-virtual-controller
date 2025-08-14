@@ -18,9 +18,9 @@ const KEY_TO_BUTTON = {
 let websocket = null;
 let selectedOutput = null;
 let groupId = null;
-let inputClientId = null;
-let inputClientName = null;
-let inputClients = [];
+let userId = null;
+let selectedUserName = null;
+let users = [];
 let outputDevices = [];
 
 // ==== DOM Elements ====
@@ -36,26 +36,26 @@ const copyLinkBtn = document.getElementById("copy-link-btn");
 const copyLinkBtnOriginalText = copyLinkBtn.textContent;
 const activeGroupIdElement = document.getElementById("active-group-id");
 
-const noClientsElement = document.getElementById("no-clients");
-const clientsTableWrapper = document.getElementById("clients-table-wrapper");
-const clientsTableBody = document.getElementById("clients-table-body");
-const noDevicesElement = document.getElementById("no-devices");
+const noUsersElement = document.getElementById("no-users-wrapper");
+const usersTableWrapper = document.getElementById("users-table-wrapper");
+const usersTableBody = document.getElementById("users-table-body");
+const noDevicesElement = document.getElementById("no-devices-wrapper");
 const outputDevicesContainer = document.getElementById(
   "output-devices-container"
 );
 
 // ==== WebSocket Connection ====
 function updateUserData(event = null) {
-  inputClientName = nameInput.value.trim() || inputClientName;
+  selectedUserName = nameInput.value.trim() || selectedUserName;
   const currentColor = colorInput.value;
-  localStorage.setItem("dvc_name", inputClientName);
+  localStorage.setItem("dvc_name", selectedUserName);
   localStorage.setItem("dvc_color", currentColor);
 
   if (websocket && websocket.readyState === WebSocket.OPEN) {
     websocket.send(
       JSON.stringify({
         type: "register",
-        name: inputClientName,
+        name: selectedUserName,
         color: currentColor,
       })
     );
@@ -67,7 +67,7 @@ function connectToGroup(new_group_id) {
   if (websocket) websocket.close();
 
   let protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  let url = `${protocol}://${window.location.host}/ws/input`;
+  let url = `${protocol}://${window.location.host}/ws/user`;
   if (new_group_id) url += `?group_id=${new_group_id}`;
   websocket = new WebSocket(url);
 
@@ -76,36 +76,32 @@ function connectToGroup(new_group_id) {
 
     if (data.type === "config") {
       groupId = data.group_id;
-      inputClientId = data.input_client_id;
+      userId = data.user_id;
       activeGroupIdElement.textContent = groupId;
       joinContainer.classList.add("d-none");
       leaveContainer.classList.remove("d-none");
       updateUserData();
     } else if (data.type === "group_state") {
-      inputClients = (data.input_clients || []).map((inputClient) => ({
-        id: inputClient.id,
-        name: inputClient.name,
-        color: inputClient.color,
-        lastActivity: inputClient.lastActivity,
-        devices: inputClient.selected_output
-          ? [inputClient.selected_output]
-          : [],
+      users = (data.users || []).map((user) => ({
+        id: user.id,
+        name: user.name,
+        color: user.color,
+        lastActivity: user.lastActivity,
+        devices: user.selected_output ? [user.selected_output] : [],
       }));
 
       outputDevices = (data.output_devices || []).map((outputDevice) => ({
         id: outputDevice.id,
         name: outputDevice.name,
-        connectedClients: outputDevice.connected_inputs || [],
+        connectedUsers: outputDevice.connected_users || [],
       }));
 
-      const currentClient = inputClients.find(
-        (inputClient) => inputClient.id === inputClientId
-      );
-      selectedOutput = currentClient
-        ? currentClient.devices[0] || null
+      const currentUser = users.find((user) => user.id === userId);
+      selectedOutput = currentUser
+        ? currentUser.devices[0] || null
         : selectedOutput;
 
-      renderInputClients();
+      renderUsers();
       renderOutputDevices();
     } else if (data.type === "output_selected") {
       selectedOutput = data.id || null;
@@ -137,42 +133,42 @@ function sendButtonEvent(event, state) {
 document.addEventListener("keydown", (event) => sendButtonEvent(event, 1));
 document.addEventListener("keyup", (event) => sendButtonEvent(event, 0));
 
-function renderInputClients() {
-  clientsTableBody.innerHTML = "";
+function renderUsers() {
+  usersTableBody.innerHTML = "";
 
-  if (inputClients.length === 0) {
-    clientsTableWrapper.classList.add("d-none");
-    noClientsElement.classList.remove("d-none");
+  if (users.length === 0) {
+    usersTableWrapper.classList.add("d-none");
+    noUsersElement.classList.remove("d-none");
     return;
   } else {
-    clientsTableWrapper.classList.remove("d-none");
-    noClientsElement.classList.add("d-none");
+    usersTableWrapper.classList.remove("d-none");
+    noUsersElement.classList.add("d-none");
   }
 
-  inputClients.forEach((client) => {
+  users.forEach((user) => {
     const tr = document.createElement("tr");
 
     const tdName = document.createElement("td");
     const tag = document.createElement("span");
-    tag.className = "client-tag";
-    tag.style.backgroundColor = client.color || "#ccc";
+    tag.className = "user-tag";
+    tag.style.backgroundColor = user.color || "#ccc";
 
-    if (client.id === inputClientId) {
-      tag.textContent = `${client.name} (You)`;
+    if (user.id === userId) {
+      tag.textContent = `${user.name} (You)`;
     } else {
-      tag.textContent = client.name;
+      tag.textContent = user.name;
     }
 
     tdName.appendChild(tag);
 
     const tdActivity = document.createElement("td");
-    tdActivity.textContent = client.lastActivity;
+    tdActivity.textContent = user.lastActivity;
 
     const tdDevices = document.createElement("td");
-    tdDevices.textContent = client.devices.join(", ");
+    tdDevices.textContent = user.devices.join(", ");
 
     tr.append(tdName, tdActivity, tdDevices);
-    clientsTableBody.appendChild(tr);
+    usersTableBody.appendChild(tr);
   });
 }
 
@@ -281,31 +277,29 @@ function renderOutputDevices() {
       alert(`Button map for ${device.name}`);
     });
 
-    const clientsDiv = document.createElement("div");
+    const usersDiv = document.createElement("div");
     const strong = document.createElement("strong");
-    strong.textContent = "Connected Clients:";
-    clientsDiv.appendChild(strong);
+    strong.textContent = "Connected Users:";
+    usersDiv.appendChild(strong);
 
-    const clientsList = document.createElement("div");
-    device.connectedClients.forEach((clientName) => {
-      const clientData = inputClients.find(
-        (inputClient) => inputClient.name === clientName
-      );
+    const userList = document.createElement("div");
+    device.connectedUsers.forEach((connectedUserName) => {
+      const userData = users.find((user) => user.name === connectedUserName);
       const tag = document.createElement("span");
-      tag.className = "client-tag";
-      tag.style.backgroundColor = clientData?.color || "#ccc";
+      tag.className = "user-tag";
+      tag.style.backgroundColor = userData?.color || "#ccc";
 
-      if (clientData?.id === inputClientId) {
-        tag.textContent = `${clientName} (You)`;
+      if (userData?.id === userId) {
+        tag.textContent = `${connectedUserName} (You)`;
       } else {
-        tag.textContent = clientName;
+        tag.textContent = connectedUserName;
       }
 
-      clientsList.appendChild(tag);
+      userList.appendChild(tag);
     });
 
-    clientsDiv.appendChild(clientsList);
-    body.append(titleWrapper, btn, clientsDiv);
+    usersDiv.appendChild(userList);
+    body.append(titleWrapper, btn, usersDiv);
     card.appendChild(body);
     col.appendChild(card);
     outputDevicesContainer.appendChild(col);
@@ -338,9 +332,9 @@ function handleLeaveGroupButton(event) {
 
   groupId = null;
   activeGroupIdElement.textContent = "";
-  inputClients = [];
+  users = [];
   outputDevices = [];
-  renderInputClients();
+  renderUsers();
   renderOutputDevices();
 
   joinContainer.classList.remove("d-none");
@@ -389,9 +383,9 @@ copyLinkBtn.addEventListener("click", handleCopyGroupLinkButton);
 window.addEventListener("DOMContentLoaded", () => {
   const storedUserName = localStorage.getItem("dvc_name") || "";
   const storedUserColor = localStorage.getItem("dvc_color");
-  inputClientName =
+  selectedUserName =
     storedUserName.trim() || `User-${crypto.randomUUID().slice(0, 4)}`;
-  nameInput.value = inputClientName;
+  nameInput.value = selectedUserName;
   colorInput.value = storedUserColor || "#ff6f61";
   removeGroupIdFromURL();
 });
