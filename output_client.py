@@ -3,6 +3,7 @@ import json
 import argparse
 import uinput
 import websockets
+import signal
 
 # Map button names from semantic codes to uinput codes
 SEMANTIC_TO_UINPUT = {
@@ -38,6 +39,10 @@ class UInputController:
         print(f"Emitted: {button_name} -> {state}")
 
 
+stop_event = asyncio.Event()
+global_ws: websockets.ClientConnection = None
+
+
 async def start_output_client(
     server_host: str,
     server_port: int,
@@ -51,35 +56,56 @@ async def start_output_client(
     server_http = f"{scheme_http}://{server_host}:{server_port}"
     server_ws = f"{scheme_ws}://{server_host}:{server_port}/ws/output"
 
-    uri = f"{server_ws}?group_id={group_id}"
-    if name:
-        uri += f"&name={name}"
+    uinput_controller = UInputController()
 
-    async with websockets.connect(uri) as ws:
-        # First message should be the config from server
-        message = await ws.recv()
-        data: dict[str, str] = json.loads(message)
-        if data.get("type") != "config":
-            print("Unexpected initial message:", data)
-        print(f"Connected as output {data['output_device_name']} in group {data['group_id']}")
-        print(f"Available buttons: {', '.join(SEMANTIC_TO_UINPUT.keys())}")
-        print(f"Open {server_http}/?group-id={group_id} to join group {group_id}")
-
-        ui = UInputController()
+    while not stop_event.is_set():
+        uri = f"{server_ws}?group_id={group_id}"
+        if name:
+            uri += f"&name={name}"
 
         try:
-            while True:
+            async with websockets.connect(uri) as ws:
+                global global_ws
+                global_ws = ws
+                # First message should be the config from server
                 message = await ws.recv()
-                data = json.loads(message)
-                if data.get("type") == "key_event":
-                    ui.emit(data.get("code"), int(data.get("state", 0)))
+                data: dict[str, str] = json.loads(message)
+                if data.get("type") != "config":
+                    raise ConnectionRefusedError(f"Unexpected initial message: {data}")
+                else:
+                    print(f"[INFO] Connected as output {data['output_device_name']} in group {data['group_id']}")
+                    print(f"[INFO] Available buttons: {', '.join(SEMANTIC_TO_UINPUT.keys())}")
+                    print(f"[INFO] Open {server_http}/?group-id={group_id} to join group {group_id}")
 
-                elif data.get("type") == "rename_output":
-                    # Server tells us our name changed
-                    print(f"[INFO] Output device renamed to: {data.get('name')}")
+                while not stop_event.is_set():
+                    try:
+                        message = await ws.recv()
+                        data = json.loads(message)
+                        if data.get("type") == "key_event":
+                            uinput_controller.emit(data.get("code"), int(data.get("state", 0)))
 
-        except websockets.ConnectionClosed:
-            print("Disconnected from server.")
+                        elif data.get("type") == "rename_output":
+                            print(f"[INFO] Output device renamed to: {data.get('name')}")
+
+                    except websockets.ConnectionClosed:
+                        if stop_event.is_set():
+                            continue
+                        print("[WARN] Connection to server lost. Reconnecting...")
+                        break  # break inner loop to reconnect
+
+        except (ConnectionRefusedError, OSError) as e:
+            print(f"[WARN] Server unreachable: {e}. Retrying in 3 seconds...")
+
+        if stop_event.is_set():
+            continue
+        await asyncio.sleep(3)  # wait before retry
+
+
+def handle_sigint():
+    print("\n[INFO] Shutting down...")
+    stop_event.set()
+    if global_ws:
+        asyncio.ensure_future(global_ws.close())
 
 
 if __name__ == "__main__":
@@ -91,10 +117,17 @@ if __name__ == "__main__":
     parser.add_argument("--name", help="Output device display name", default=None)
     args = parser.parse_args()
 
-    asyncio.run(start_output_client(
-        server_host=args.host,
-        server_port=args.port,
-        secure=args.secure,
-        group_id=args.group,
-        name=args.name
-    ))
+    loop = asyncio.get_event_loop()
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        loop.add_signal_handler(sig, handle_sigint)
+
+    try:
+        loop.run_until_complete(start_output_client(
+            server_host=args.host,
+            server_port=args.port,
+            secure=args.secure,
+            group_id=args.group,
+            name=args.name
+        ))
+    finally:
+        loop.close()
