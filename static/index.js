@@ -176,7 +176,7 @@ function renderOutputDevices() {
 
     // Editable title
     const titleWrapper = document.createElement("div");
-    titleWrapper.className = "d-flex align-items-center w-100 gap-2";
+    titleWrapper.className = "d-flex align-items-center w-100 gap-2 mb-2";
 
     const title = document.createElement("h6");
     title.className = "fw-bold mb-0 flex-grow-1 text-truncate";
@@ -241,10 +241,6 @@ function renderOutputDevices() {
 
     titleWrapper.append(title, saveBtn);
 
-    const idInfo = document.createElement("p");
-    idInfo.className = "text-muted";
-    idInfo.textContent = `ID: ${device.id}`;
-
     const btn = document.createElement("button");
     btn.className = "btn btn-sm btn-outline-primary mb-2";
     btn.textContent = "Open Button Map";
@@ -269,7 +265,7 @@ function renderOutputDevices() {
     });
 
     clientsDiv.appendChild(clientsList);
-    body.append(titleWrapper, idInfo, btn, clientsDiv);
+    body.append(titleWrapper, btn, clientsDiv);
     card.appendChild(body);
     col.appendChild(card);
     outputDevicesContainer.appendChild(col);
