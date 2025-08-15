@@ -360,6 +360,10 @@ function toggleDeviceConnection(event, deviceId) {
 
 // === UI Event Handlers ===
 function handleJoinGroup(event) {
+  if (event.type === "keydown" && event.key !== "Enter") {
+    return;
+  }
+
   event.preventDefault();
   const groupInputValue = groupIdInput.value.trim();
   connectToGroup(groupInputValue || null);
@@ -417,6 +421,7 @@ function removeGroupIdFromUrl() {
 nameInput.addEventListener("input", updateUserData);
 colorInput.addEventListener("input", updateUserData);
 joinGroupButton.addEventListener("click", handleJoinGroup);
+groupIdInput.addEventListener("keydown", handleJoinGroup);
 leaveGroupButton.addEventListener("click", handleLeaveGroup);
 copyGroupLinkButton.addEventListener("click", handleCopyGroupLink);
 
