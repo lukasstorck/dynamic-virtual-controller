@@ -58,36 +58,39 @@ async def start_output_client(
 
     controller = UInputController()
 
+    # reconnect loop
     while not stop_event.is_set():
         connection_uri = f'{ws_url}?group_id={group_id}'
         if device_name:
             connection_uri += f'&name={device_name}'
 
         try:
-            async with websockets.connect(connection_uri) as ws:
+            async with websockets.connect(connection_uri) as websocket:
                 global global_websocket
-                global_websocket = ws
+                global_websocket = websocket
 
-                initial_message = await ws.recv()
+                initial_message = await websocket.recv()
                 data: dict[str, str] = json.loads(initial_message)
 
                 if data.get('type') != 'config':
-                    raise ConnectionRefusedError(f'Unexpected initial message: {data}')
+                    raise ConnectionAbortedError(f'Unexpected initial message: {data}')
 
                 print(f'[INFO] Connected as output {data["output_device_name"]} in group {data["group_id"]}')
                 print(f'[INFO] Available buttons: {", ".join(SEMANTIC_TO_UINPUT.keys())}')
                 print(f'[INFO] Open {http_url}/?group-id={group_id} to join group {group_id}')
 
+                # message loop
                 while not stop_event.is_set():
                     try:
-                        message = await ws.recv()
-                        event_data = json.loads(message)
+                        message = await websocket.recv()
+                        incoming_data: dict = json.loads(message)
 
-                        if event_data.get('type') == 'key_event':
-                            controller.emit(event_data.get('code'), int(event_data.get('state', 0)))
+                        if incoming_data.get('type') == 'key_event':
+                            controller.emit(incoming_data.get('code'), int(incoming_data.get('state', 0)))
 
-                        elif event_data.get('type') == 'rename_output':
-                            print(f'[INFO] Output device renamed to: {event_data.get("name")}')
+                        elif incoming_data.get('type') == 'rename_output':
+                            device_name: str = incoming_data.get('name')
+                            print(f'[INFO] Output device renamed to: {device_name}')
 
                     except websockets.ConnectionClosed:
                         if stop_event.is_set():
@@ -95,7 +98,7 @@ async def start_output_client(
                         print('[WARN] Connection to server lost. Reconnecting...')
                         break
 
-        except (ConnectionRefusedError, OSError) as error:
+        except (ConnectionAbortedError, ConnectionRefusedError, OSError) as error:
             print(f'[WARN] Server unreachable: {error}. Retrying in 3 seconds...')
 
         if stop_event.is_set():

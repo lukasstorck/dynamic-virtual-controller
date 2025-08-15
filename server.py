@@ -129,7 +129,8 @@ async def ws_user(websocket: WebSocket):
         await group.broadcast_group_state()
 
         while True:
-            incoming_data: dict[str, str] = json.loads(await websocket.receive_text())
+            message = await websocket.receive_text()
+            incoming_data: dict[str, str] = json.loads(message)
             current_user = group.users[user_id]
             current_user.last_activity = time.time()
 
@@ -192,12 +193,13 @@ async def ws_output(websocket: WebSocket):
     output_device_name = query_params.get('name') or output_device_id
 
     group = await get_group(group_id)
-    group.output_devices[output_device_id] = OutputDevice(output_device_id, websocket, output_device_name)
+    output_device = OutputDevice(output_device_id, websocket, output_device_name)
+    group.output_devices[output_device_id] = output_device
 
     await websocket.send_text(json.dumps({
         'type': 'config',
-        'output_device_id': output_device_id,
-        'output_device_name': output_device_name,
+        'output_device_id': output_device.id,
+        'output_device_name': output_device.name,
         'group_id': group_id,
     }))
 
@@ -205,15 +207,17 @@ async def ws_output(websocket: WebSocket):
 
     try:
         while True:
-            incoming_data = json.loads(await websocket.receive_text())
+            message = await websocket.receive_text()
+            incoming_data = json.loads(message)
+
             if incoming_data.get('type') == 'rename' and 'name' in incoming_data:
-                group.output_devices[output_device_id].name = incoming_data['name']
+                output_device.name = incoming_data['name']
                 await group.broadcast_group_state()
 
     except WebSocketDisconnect:
-        group.output_devices.pop(output_device_id, None)
+        group.output_devices.pop(output_device.id, None)
         await group.broadcast_group_state()
-        print(f'[{group_id}] Output {output_device_id} disconnected.')
+        print(f'[{group.id}] Output {output_device.id} disconnected.')
 
 
 if __name__ == '__main__':
