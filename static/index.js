@@ -251,9 +251,12 @@ function createDeviceCard(device) {
   titleElement.textContent = device.name;
 
   const saveButton = document.createElement("button");
-  saveButton.textContent = "✔";
   saveButton.className =
-    "d-inline-block invisible btn btn-success btn-sm flex-shrink-0 px-2 py-0";
+    "d-inline-flex align-items-center justify-content-center invisible btn btn-outline-success btn-sm flex-shrink-0 px-2 py-0";
+
+  const checkIcon = document.createElement("span");
+  checkIcon.className = "material-symbols-outlined";
+  checkIcon.textContent = "check";
 
   titleElement.addEventListener("input", () => {
     if (titleElement.textContent.trim() === device.name) {
@@ -278,6 +281,7 @@ function createDeviceCard(device) {
     sendDeviceNameUpdate(device, titleElement, saveButton);
   });
 
+  saveButton.appendChild(checkIcon);
   titleWrapper.append(titleElement, saveButton);
 
   const mapButton = document.createElement("button");
