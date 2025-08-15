@@ -104,7 +104,7 @@ function handleGroupStateMessage(data) {
     id: device.id,
     name: device.name,
     connectedUsers: device.connected_users || [],
-    buttonMap: device.button_map || {},
+    keybindPresets: device.keybind_presets || {},
   }));
 
   const currentUser = usersList.find((user) => user.id === userId);
@@ -142,7 +142,7 @@ function sendButtonEvent(event, state) {
   const currentDevice = outputDevicesList.find(
     (device) => device.id === selectedOutputId
   );
-  const buttonCode = currentDevice?.buttonMap[event.code];
+  const buttonCode = currentDevice?.keybindPresets["default"][event.code];
   if (!buttonCode) return;
 
   websocket.send(

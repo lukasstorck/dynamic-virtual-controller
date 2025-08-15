@@ -2,8 +2,10 @@ import asyncio
 import json
 import argparse
 import uinput
-import websockets
+import pathlib
 import signal
+import websockets
+import yaml
 
 # Mapping semantic button names to uinput codes
 SEMANTIC_TO_UINPUT = {
@@ -18,23 +20,6 @@ SEMANTIC_TO_UINPUT = {
     'BTN_TL': uinput.BTN_TL,
     'BTN_TR': uinput.BTN_TR,
     'BTN_START': uinput.BTN_START,
-}
-
-DEFAULT_USER_BUTTON_MAP = {
-    'KeyW': 'BTN_DPAD_UP',
-    'KeyA': 'BTN_DPAD_LEFT',
-    'KeyS': 'BTN_DPAD_DOWN',
-    'KeyD': 'BTN_DPAD_RIGHT',
-    'KeyE': 'BTN_A',
-    'KeyQ': 'BTN_B',
-    'KeyX': 'BTN_X',
-    'KeyY': 'BTN_Y',
-    'Tab': 'BTN_TL',
-    'KeyR': 'BTN_TR',
-    'Escape': 'BTN_START',
-    'Space': 'BTN_A',
-    'KeyZ': 'BTN_Y',
-    'KeyF': 'BTN_Y',
 }
 
 
@@ -65,7 +50,8 @@ async def start_output_client(
     server_port: int,
     secure: bool,
     group_id: str,
-    device_name: str | None
+    device_name: str | None,
+    keybind_presets: dict[str, dict[str, str]],
 ):
     http_scheme = 'https' if secure else 'http'
     ws_scheme = 'wss' if secure else 'ws'
@@ -97,8 +83,8 @@ async def start_output_client(
                 print(f'[INFO] Open {http_url}/?group-id={group_id} to join group {group_id}')
 
                 await websocket.send(json.dumps({
-                    'type': 'button_map',
-                    'button_map': DEFAULT_USER_BUTTON_MAP,
+                    'type': 'set_keybind_presets',
+                    'keybind_presets': keybind_presets,
                 }))
 
                 # message loop
@@ -137,12 +123,31 @@ def handle_sigint():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--host', default='localhost', help='Server hostname')
-    parser.add_argument('--port', type=int, default=8000, help='Server port')
+    parser.add_argument('--settings', default='settings.yaml', help='YAML settings file')
+    parser.add_argument('--host', help='Server hostname')
+    parser.add_argument('--port', type=int, help='Server port')
     parser.add_argument('--secure', action='store_true', help='Use HTTPS/WSS')
-    parser.add_argument('--group', required=True, help='Group ID to join')
-    parser.add_argument('--name', help='Output device display name', default=None)
+    parser.add_argument('--group', help='Group ID to join')
+    parser.add_argument('--name', help='Output device display name')
     args = parser.parse_args()
+
+    config = {}
+    if args.settings:
+        settings_path = pathlib.Path(args.settings)
+        if not settings_path.is_file():
+            raise FileNotFoundError(f"Settings file not found: {args.settings}")
+        with settings_path.open() as file:
+            config = yaml.safe_load(file) or {}
+
+    host = args.host or config.get('host', 'localhost')
+    port = args.port or config.get('port', 8000)
+    secure = args.secure or config.get('secure', False)
+    group_id = args.group or config.get('group')
+    device_name = args.name or config.get('name', None)
+    keybind_presets = config.get('keybind_presets', {'default': {}})
+
+    if not group_id:
+        parser.error("Group ID is required (either via --group or settings file)")
 
     loop = asyncio.new_event_loop()
     for signal_type in (signal.SIGINT, signal.SIGTERM):
@@ -150,11 +155,12 @@ if __name__ == '__main__':
 
     try:
         loop.run_until_complete(start_output_client(
-            server_host=args.host,
-            server_port=args.port,
-            secure=args.secure,
-            group_id=args.group,
-            device_name=args.name
+            server_host=host,
+            server_port=port,
+            secure=secure,
+            group_id=group_id,
+            device_name=device_name,
+            keybind_presets=keybind_presets,
         ))
     finally:
         loop.close()

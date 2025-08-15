@@ -1,0 +1,27 @@
+host: "localhost"
+port: 8000
+secure: false
+group: "test"
+name: "TestController"
+keybind_presets:
+  default:
+    KeyW: BTN_DPAD_UP
+    KeyA: BTN_DPAD_LEFT
+    KeyS: BTN_DPAD_DOWN
+    KeyD: BTN_DPAD_RIGHT
+    KeyE: BTN_A
+    KeyQ: BTN_B
+    KeyX: BTN_X
+    KeyY: BTN_Y
+    Tab: BTN_TL
+    KeyR: BTN_TR
+    Escape: BTN_START
+    Space: BTN_A
+    KeyZ: BTN_Y
+    KeyF: BTN_Y
+  alt:
+    ArrowUp: BTN_DPAD_UP
+    ArrowDown: BTN_DPAD_DOWN
+    ArrowLeft: BTN_DPAD_LEFT
+    ArrowRight: BTN_DPAD_RIGHT
+    Enter: BTN_START
