@@ -1,4 +1,5 @@
-const KEY_TO_BUTTON = {
+// === Constants ===
+const DEFAULT_BUTTON_MAP = {
   KeyW: "BTN_DPAD_UP",
   KeyA: "BTN_DPAD_LEFT",
   KeyS: "BTN_DPAD_DOWN",
@@ -15,43 +16,129 @@ const KEY_TO_BUTTON = {
   KeyF: "BTN_Y",
 };
 
+const DEFAULT_COLOR = "#ff6f61";
+
+const STORAGE_NAME_KEY = "dvc_name";
+const STORAGE_COLOR_KEY = "dvc_color";
+
+// === Application State ===
 let websocket = null;
-let selectedOutput = null;
+let selectedOutputId = null;
 let groupId = null;
 let userId = null;
 let userName = null;
-let users = [];
-let outputDevices = [];
+let usersList = [];
+let outputDevicesList = [];
 
-// ==== DOM Elements ====
+// === DOM Elements ===
 const nameInput = document.getElementById("user-name");
 const colorInput = document.getElementById("color");
 const groupIdInput = document.getElementById("group-id");
 
-const joinContainer = document.getElementById("join-group-container");
-const leaveContainer = document.getElementById("leave-group-container");
-const joinBtn = document.getElementById("join-btn");
-const leaveBtn = document.getElementById("leave-btn");
-const copyLinkBtn = document.getElementById("copy-link-btn");
-const copyLinkBtnOriginalText = copyLinkBtn.textContent;
+const joinGroupContainer = document.getElementById("join-group-container");
+const leaveGroupContainer = document.getElementById("leave-group-container");
+const joinGroupButton = document.getElementById("join-btn");
+const leaveGroupButton = document.getElementById("leave-btn");
+const copyGroupLinkButton = document.getElementById("copy-link-btn");
+const copyGroupLinkButtonClickedText = "Copied!";
+const copyGroupLinkButtonDefaultText = copyGroupLinkButton.textContent;
 const activeGroupIdElement = document.getElementById("active-group-id");
 
 const noUsersElement = document.getElementById("no-users-wrapper");
 const usersTableWrapper = document.getElementById("users-table-wrapper");
 const usersTableBody = document.getElementById("users-table-body");
+
 const noDevicesElement = document.getElementById("no-devices-wrapper");
 const outputDevicesContainer = document.getElementById(
   "output-devices-container"
 );
 
-// ==== WebSocket Connection ====
-function updateUserData(event = null) {
+// === Utility Functions ===
+function saveUserPreferences(name, color) {
+  localStorage.setItem(STORAGE_NAME_KEY, name);
+  localStorage.setItem(STORAGE_COLOR_KEY, color);
+}
+
+function loadUserPreferences() {
+  const storedName = localStorage.getItem(STORAGE_NAME_KEY) || "";
+  const storedColor = localStorage.getItem(STORAGE_COLOR_KEY) || DEFAULT_COLOR;
+  return { storedName, storedColor };
+}
+
+// === WebSocket Handling ===
+function connectToGroup(newGroupId) {
+  if (websocket) websocket.close();
+
+  let protocol = window.location.protocol === "https:" ? "wss" : "ws";
+  let url = `${protocol}://${window.location.host}/ws/user`;
+  if (newGroupId) url += `?group_id=${newGroupId}`;
+  websocket = new WebSocket(url);
+
+  websocket.onmessage = handleWebSocketMessage;
+  websocket.onclose = () => {
+    console.info("WebSocket closed");
+    handleLeaveGroup();
+  };
+  websocket.onerror = (error) => {
+    console.error("WebSocket error", error);
+    handleLeaveGroup();
+  };
+}
+
+function handleWebSocketMessage(event) {
+  const data = JSON.parse(event.data);
+
+  if (data.type === "config") {
+    handleConfigMessage(data);
+  } else if (data.type === "group_state") {
+    handleGroupStateMessage(data);
+  } else if (data.type === "output_selected") {
+    selectedOutputId = data.id || null;
+  }
+}
+
+function handleConfigMessage(data) {
+  groupId = data.group_id;
+  userId = data.user_id;
+  activeGroupIdElement.textContent = groupId;
+
+  joinGroupContainer.classList.add("d-none");
+  leaveGroupContainer.classList.remove("d-none");
+
+  updateUserData();
+}
+
+function handleGroupStateMessage(data) {
+  usersList = (data.users || []).map((user) => ({
+    id: user.id,
+    name: user.name,
+    color: user.color,
+    lastActivity: user.lastActivity,
+    devices: user.selected_output ? [user.selected_output] : [],
+  }));
+
+  outputDevicesList = (data.output_devices || []).map((device) => ({
+    id: device.id,
+    name: device.name,
+    connectedUsers: device.connected_users || [],
+  }));
+
+  const currentUser = usersList.find((user) => user.id === userId);
+  selectedOutputId = currentUser
+    ? currentUser.devices[0] || null
+    : selectedOutputId;
+
+  renderUsers();
+  renderOutputDevices();
+}
+
+// === User Data Updates ===
+function updateUserData() {
   userName = nameInput.value.trim() || userName;
   const currentColor = colorInput.value;
-  localStorage.setItem("dvc_name", userName);
-  localStorage.setItem("dvc_color", currentColor);
+  saveUserPreferences(userName, currentColor);
 
-  if (websocket && websocket.readyState === WebSocket.OPEN) {
+  if (websocket?.readyState === WebSocket.OPEN) {
     websocket.send(
       JSON.stringify({
         type: "register",
@@ -62,303 +149,236 @@ function updateUserData(event = null) {
   }
 }
 
-function connectToGroup(new_group_id) {
-  // close previous connection, if there is one
-  if (websocket) websocket.close();
-
-  let protocol = window.location.protocol === "https:" ? "wss" : "ws";
-  let url = `${protocol}://${window.location.host}/ws/user`;
-  if (new_group_id) url += `?group_id=${new_group_id}`;
-  websocket = new WebSocket(url);
-
-  websocket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-
-    if (data.type === "config") {
-      groupId = data.group_id;
-      userId = data.user_id;
-      activeGroupIdElement.textContent = groupId;
-      joinContainer.classList.add("d-none");
-      leaveContainer.classList.remove("d-none");
-      updateUserData();
-    } else if (data.type === "group_state") {
-      users = (data.users || []).map((user) => ({
-        id: user.id,
-        name: user.name,
-        color: user.color,
-        lastActivity: user.lastActivity,
-        devices: user.selected_output ? [user.selected_output] : [],
-      }));
-
-      outputDevices = (data.output_devices || []).map((outputDevice) => ({
-        id: outputDevice.id,
-        name: outputDevice.name,
-        connectedUsers: outputDevice.connected_users || [],
-      }));
-
-      const currentUser = users.find((user) => user.id === userId);
-      selectedOutput = currentUser
-        ? currentUser.devices[0] || null
-        : selectedOutput;
-
-      renderUsers();
-      renderOutputDevices();
-    } else if (data.type === "output_selected") {
-      selectedOutput = data.id || null;
-    }
-  };
-
-  websocket.onclose = () => {
-    console.warn("WebSocket closed");
-    handleLeaveGroupButton(new Event("server-disconnect"));
-  };
-
-  websocket.onerror = (error) => {
-    console.error("WebSocket error", error);
-    handleLeaveGroupButton(new Event("server-disconnect"));
-  };
-}
-
-// ==== Event Sending ====
+// === Key Events ===
 function sendButtonEvent(event, state) {
   // do not toggle, when editing device name
   if (event.target.contentEditable === "true") return;
+  if (!selectedOutputId) return;
 
-  if (!selectedOutput) return;
-  const btn = KEY_TO_BUTTON[event.code];
-  if (!btn) return;
-  websocket.send(JSON.stringify({ type: "keypress", code: btn, state }));
+  const buttonCode = DEFAULT_BUTTON_MAP[event.code];
+  if (!buttonCode) return;
+
+  websocket.send(
+    JSON.stringify({
+      type: "keypress",
+      code: buttonCode,
+      state,
+    })
+  );
 }
 
-document.addEventListener("keydown", (event) => sendButtonEvent(event, 1));
-document.addEventListener("keyup", (event) => sendButtonEvent(event, 0));
-
+// === Rendering Functions ===
 function renderUsers() {
   usersTableBody.innerHTML = "";
 
-  if (users.length === 0) {
+  if (usersList.length === 0) {
     usersTableWrapper.classList.add("d-none");
     noUsersElement.classList.remove("d-none");
     return;
-  } else {
-    usersTableWrapper.classList.remove("d-none");
-    noUsersElement.classList.add("d-none");
   }
 
-  users.forEach((user) => {
-    const tr = document.createElement("tr");
+  usersTableWrapper.classList.remove("d-none");
+  noUsersElement.classList.add("d-none");
 
-    const tdName = document.createElement("td");
-    const tag = document.createElement("span");
-    tag.className = "user-tag";
-    tag.style.backgroundColor = user.color || "#ccc";
+  usersList.forEach((user) => {
+    const row = document.createElement("tr");
 
-    if (user.id === userId) {
-      tag.textContent = `${user.name} (You)`;
-    } else {
-      tag.textContent = user.name;
-    }
+    const nameCell = document.createElement("td");
+    const nameTag = document.createElement("span");
+    nameTag.className = "user-tag";
+    nameTag.style.backgroundColor = user.color || "#ccc";
+    nameTag.textContent = user.id === userId ? `${user.name} (You)` : user.name;
+    nameCell.appendChild(nameTag);
 
-    tdName.appendChild(tag);
+    const activityCell = document.createElement("td");
+    activityCell.textContent = user.lastActivity;
 
-    const tdActivity = document.createElement("td");
-    tdActivity.textContent = user.lastActivity;
-
-    const tdDevices = document.createElement("td");
-    tdDevices.textContent = user.devices
+    const devicesCell = document.createElement("td");
+    devicesCell.textContent = user.devices
       .map(
         (deviceId) =>
-          outputDevices.find((device) => device.id === deviceId)?.name
+          outputDevicesList.find((device) => device.id === deviceId)?.name
       )
       .join(", ");
 
-    tr.append(tdName, tdActivity, tdDevices);
-    usersTableBody.appendChild(tr);
+    row.append(nameCell, activityCell, devicesCell);
+    usersTableBody.appendChild(row);
   });
 }
 
 function renderOutputDevices() {
   outputDevicesContainer.innerHTML = "";
 
-  if (outputDevices.length === 0) {
+  if (outputDevicesList.length === 0) {
     outputDevicesContainer.classList.add("d-none");
     noDevicesElement.classList.remove("d-none");
     return;
-  } else {
-    outputDevicesContainer.classList.remove("d-none");
-    noDevicesElement.classList.add("d-none");
   }
 
-  outputDevices.forEach((device) => {
-    const col = document.createElement("div");
-    col.className = "col-md-4 col-lg-3";
+  outputDevicesContainer.classList.remove("d-none");
+  noDevicesElement.classList.add("d-none");
 
-    const card = document.createElement("div");
-    card.className = "card h-100 shadow-sm";
-    card.style.cursor = "pointer";
-    if (selectedOutput === device.id) {
-      card.classList.add("border-3");
-      card.style.boxShadow = "0 0 0 0.25rem rgba(13,110,253,0.12)";
-    }
-    card.addEventListener("click", (event) =>
-      toggleDeviceConnection(event, device.id)
-    );
-
-    const body = document.createElement("div");
-    body.className = "card-body";
-
-    // Editable title
-    const titleWrapper = document.createElement("div");
-    titleWrapper.className = "d-flex align-items-center w-100 gap-2 mb-2";
-
-    const title = document.createElement("h6");
-    title.className = "fw-bold mb-0 flex-grow-1 text-truncate";
-    title.contentEditable = "true";
-    title.textContent = device.name;
-
-    let originalName = device.name;
-
-    const saveBtn = document.createElement("button");
-    saveBtn.textContent = "✔";
-    saveBtn.className = "btn btn-success btn-sm";
-    saveBtn.classList.add("flex-shrink-0", "px-2", "py-0");
-    saveBtn.style.display = "none"; // hidden until change
-
-    function updateSaveButtonVisibility() {
-      saveBtn.style.display =
-        title.textContent.trim() !== originalName ? "inline-block" : "none";
-    }
-
-    function sendNameUpdate() {
-      const newName = title.textContent.trim();
-      if (!newName) {
-        // do not accept empty name
-        title.textContent = device.name;
-        saveBtn.style.display = "none";
-        return;
-      }
-
-      if (newName && newName !== originalName) {
-        originalName = newName;
-        saveBtn.style.display = "none";
-        device.name = newName;
-
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.send(
-            JSON.stringify({
-              type: "rename_output",
-              id: device.id,
-              name: newName,
-            })
-          );
-        }
-      }
-    }
-
-    title.addEventListener("input", updateSaveButtonVisibility);
-
-    // Save on Enter
-    title.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault(); // prevent new line
-        sendNameUpdate();
-        title.blur(); // optional: remove focus
-      }
-    });
-
-    // Save on button click
-    saveBtn.addEventListener("click", (event) => {
-      event.stopPropagation();
-      sendNameUpdate();
-    });
-
-    titleWrapper.append(title, saveBtn);
-
-    const btn = document.createElement("button");
-    btn.className = "btn btn-sm btn-outline-primary mb-2";
-    btn.textContent = "Open Button Map";
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      alert(`Button map for ${device.name}`);
-    });
-
-    const usersDiv = document.createElement("div");
-    const strong = document.createElement("strong");
-    strong.textContent = "Connected Users:";
-    usersDiv.appendChild(strong);
-
-    const userList = document.createElement("div");
-    device.connectedUsers.forEach((connectedUserId) => {
-      const userData = users.find((user) => user.id === connectedUserId);
-      const tag = document.createElement("span");
-      tag.className = "user-tag";
-      tag.style.backgroundColor = userData?.color || "#ccc";
-
-      if (userData?.id === userId) {
-        tag.textContent = `${userData.name} (You)`;
-      } else {
-        tag.textContent = userData.name;
-      }
-
-      userList.appendChild(tag);
-    });
-
-    usersDiv.appendChild(userList);
-    body.append(titleWrapper, btn, usersDiv);
-    card.appendChild(body);
-    col.appendChild(card);
-    outputDevicesContainer.appendChild(col);
+  outputDevicesList.forEach((device) => {
+    outputDevicesContainer.appendChild(createDeviceCard(device));
   });
 }
 
-// ==== Device Selection ====
+function createDeviceCard(device) {
+  const column = document.createElement("div");
+  column.className = "col-md-4 col-lg-3";
+
+  const card = document.createElement("div");
+  card.className = "card h-100 shadow-sm";
+  card.style.cursor = "pointer";
+  if (selectedOutputId === device.id) {
+    card.classList.add("border-3");
+    card.style.boxShadow = "0 0 0 0.25rem rgba(13,110,253,0.12)";
+  }
+  card.addEventListener("click", (event) =>
+    toggleDeviceConnection(event, device.id)
+  );
+
+  const body = document.createElement("div");
+  body.className = "card-body";
+
+  // Editable title
+  const titleWrapper = document.createElement("div");
+  titleWrapper.className = "d-flex align-items-center w-100 gap-2 mb-2";
+
+  const titleElement = document.createElement("h6");
+  titleElement.className = "fw-bold mb-0 flex-grow-1 text-truncate";
+  titleElement.contentEditable = "true";
+  titleElement.textContent = device.name;
+
+  const saveButton = document.createElement("button");
+  saveButton.textContent = "✔";
+  saveButton.className =
+    "d-inline-block invisible btn btn-success btn-sm flex-shrink-0 px-2 py-0";
+
+  titleElement.addEventListener("input", () => {
+    if (titleElement.textContent.trim() === device.name) {
+      saveButton.classList.add("invisible");
+    } else {
+      saveButton.classList.remove("invisible");
+    }
+  });
+
+  // Save on Enter
+  titleElement.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault(); // prevent new line
+      sendDeviceNameUpdate(device, titleElement, saveButton);
+      titleElement.blur();
+    }
+  });
+
+  // Save on button click
+  saveButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    sendDeviceNameUpdate(device, titleElement, saveButton);
+  });
+
+  titleWrapper.append(titleElement, saveButton);
+
+  const mapButton = document.createElement("button");
+  mapButton.className = "btn btn-sm btn-outline-primary mb-2";
+  mapButton.textContent = "Open Button Map";
+  mapButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    alert(`Button map for ${device.name}`);
+  });
+
+  const connectedUsersSection = document.createElement("div");
+  const connectedUsersLabel = document.createElement("strong");
+  connectedUsersLabel.textContent = "Connected Users:";
+  connectedUsersSection.appendChild(connectedUsersLabel);
+
+  const userListContainer = document.createElement("div");
+  device.connectedUsers.forEach((connectedUserId) => {
+    const userData = usersList.find((user) => user.id === connectedUserId);
+    const userTag = document.createElement("span");
+    userTag.className = "user-tag";
+    userTag.style.backgroundColor = userData?.color || "#ccc";
+    userTag.textContent =
+      userData?.id === userId ? `${userData.name} (You)` : userData?.name || "";
+    userListContainer.appendChild(userTag);
+  });
+
+  connectedUsersSection.appendChild(userListContainer);
+
+  body.append(titleWrapper, mapButton, connectedUsersSection);
+  card.appendChild(body);
+  column.appendChild(card);
+
+  return column;
+}
+
+function sendDeviceNameUpdate(device, titleElement, saveButton) {
+  const newName = titleElement.textContent.trim();
+  if (!newName) {
+    // do not accept empty name
+    titleElement.textContent = device.name;
+    return;
+  }
+  if (newName !== device.name) {
+    device.name = newName;
+    if (websocket?.readyState === WebSocket.OPEN) {
+      websocket.send(
+        JSON.stringify({
+          type: "rename_output",
+          id: device.id,
+          name: newName,
+        })
+      );
+    }
+  }
+}
+
+// === Device Selection ===
 function toggleDeviceConnection(event, deviceId) {
   // do not toggle, when editing device name
   if (event.target.contentEditable === "true") return;
-
   if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
-  const newTarget = selectedOutput === deviceId ? null : deviceId;
+
+  const newTarget = selectedOutputId === deviceId ? null : deviceId;
   websocket.send(JSON.stringify({ type: "select_output", id: newTarget }));
 }
 
-// ==== Initial Load ====
-function handleJoinGroupButton(event) {
+// === UI Event Handlers ===
+function handleJoinGroup(event) {
   event.preventDefault();
-  const group_id = groupIdInput.value.trim();
-  connectToGroup(group_id || null);
+  const groupInputValue = groupIdInput.value.trim();
+  connectToGroup(groupInputValue || null);
 }
 
-function handleLeaveGroupButton(event) {
-  event.preventDefault();
+function handleLeaveGroup(event) {
+  if (event) event.preventDefault();
   if (websocket) {
     websocket.close();
     websocket = null;
   }
-
   groupId = null;
   activeGroupIdElement.textContent = "";
-  users = [];
-  outputDevices = [];
+  usersList = [];
+  outputDevicesList = [];
   renderUsers();
   renderOutputDevices();
 
-  joinContainer.classList.remove("d-none");
-  leaveContainer.classList.add("d-none");
+  joinGroupContainer.classList.remove("d-none");
+  leaveGroupContainer.classList.add("d-none");
 }
 
-function handleCopyGroupLinkButton(event) {
+function handleCopyGroupLink(event) {
   event.preventDefault();
   if (!groupId) return;
 
-  const groupLink = `${window.location.origin}?group_id=${groupId}`;
-  const copiedText = "Copied!";
-
+  const groupLink = `${window.location.origin}/?group_id=${groupId}`;
   navigator.clipboard
     .writeText(groupLink)
     .then(() => {
-      copyLinkBtn.textContent = copiedText;
+      copyGroupLinkButton.textContent = copyGroupLinkButtonClickedText;
       setTimeout(() => {
-        copyLinkBtn.textContent = copyLinkBtnOriginalText;
+        copyGroupLinkButton.textContent = copyGroupLinkButtonDefaultText;
       }, 1500);
     })
     .catch((err) => {
@@ -366,11 +386,11 @@ function handleCopyGroupLinkButton(event) {
     });
 }
 
-function removeGroupIdFromURL() {
+function removeGroupIdFromUrl() {
   const url = new URL(window.location.href);
-  const params = new URLSearchParams(url.search);
-  const urlGroupId = params.get("group_id");
-  if (urlGroupId === null) return;
+  const urlGroupId = url.searchParams.get("group_id");
+  if (!urlGroupId) return;
+
   groupId = urlGroupId.trim();
 
   const newUrl = `${url.origin}${url.pathname}`;
@@ -379,17 +399,20 @@ function removeGroupIdFromURL() {
   if (groupId) connectToGroup(groupId);
 }
 
+// === Event Listeners ===
 nameInput.addEventListener("input", updateUserData);
 colorInput.addEventListener("input", updateUserData);
-joinBtn.addEventListener("click", handleJoinGroupButton);
-leaveBtn.addEventListener("click", handleLeaveGroupButton);
-copyLinkBtn.addEventListener("click", handleCopyGroupLinkButton);
+joinGroupButton.addEventListener("click", handleJoinGroup);
+leaveGroupButton.addEventListener("click", handleLeaveGroup);
+copyGroupLinkButton.addEventListener("click", handleCopyGroupLink);
+
+document.addEventListener("keydown", (event) => sendButtonEvent(event, 1));
+document.addEventListener("keyup", (event) => sendButtonEvent(event, 0));
 
 window.addEventListener("DOMContentLoaded", () => {
-  const storedUserName = localStorage.getItem("dvc_name") || "";
-  const storedUserColor = localStorage.getItem("dvc_color");
-  userName = storedUserName.trim() || `User-${crypto.randomUUID().slice(0, 4)}`;
+  const { storedName, storedColor } = loadUserPreferences();
+  userName = storedName.trim() || `User-${crypto.randomUUID().slice(0, 4)}`;
   nameInput.value = userName;
-  colorInput.value = storedUserColor || "#ff6f61";
-  removeGroupIdFromURL();
+  colorInput.value = storedColor;
+  removeGroupIdFromUrl();
 });

@@ -13,7 +13,13 @@ groups_lock = asyncio.Lock()
 
 
 class User:
-    def __init__(self, id: str, websocket: WebSocket, name: str = None, color: str = '#cccccc'):
+    def __init__(
+        self,
+        id: str,
+        websocket: WebSocket,
+        name: str | None = None,
+        color: str = '#cccccc',
+    ):
         self.id = id
         self.websocket = websocket
         self.name = name or id
@@ -27,12 +33,12 @@ class User:
             'name': self.name,
             'color': self.color,
             'lastActivity': self.last_activity,
-            'selected_output': self.selected_output
+            'selected_output': self.selected_output,
         }
 
 
 class OutputDevice:
-    def __init__(self, id: str, websocket: WebSocket, name: str = None):
+    def __init__(self, id: str, websocket: WebSocket, name: str | None = None):
         self.id = id
         self.websocket = websocket
         self.name = name or id
@@ -46,35 +52,34 @@ class OutputDevice:
 
 
 class Group:
-    def __init__(self, group_id):
+    def __init__(self, group_id: str):
         self.id = group_id
         self.users: dict[str, User] = {}
         self.output_devices: dict[str, OutputDevice] = {}
 
     def serialize_state(self):
-        users = [user.serialize() for user in self.users.values()]
+        users_data = [user.serialize() for user in self.users.values()]
 
-        output_devices = []
+        output_devices_data = []
         for output_device in self.output_devices.values():
-            connected = [
-                user.id
-                for user in self.users.values()
+            connected_users = [
+                user.id for user in self.users.values()
                 if user.selected_output == output_device.id
             ]
-            output_devices.append(output_device.serialize(connected))
+            output_devices_data.append(output_device.serialize(connected_users))
 
         return {
             'type': 'group_state',
             'group_id': self.id,
-            'users': users,
-            'output_devices': output_devices,
+            'users': users_data,
+            'output_devices': output_devices_data,
         }
 
     async def broadcast_group_state(self):
-        state = json.dumps(self.serialize_state())
-        for user in list(self.users.values()) + list(self.output_devices.values()):
+        group_state_message = json.dumps(self.serialize_state())
+        for participant in list(self.users.values()) + list(self.output_devices.values()):
             try:
-                await user.websocket.send_text(state)
+                await participant.websocket.send_text(group_state_message)
             except Exception:
                 pass
 
@@ -106,69 +111,68 @@ async def favicon():
 @app.websocket('/ws/user')
 async def ws_user(websocket: WebSocket):
     await websocket.accept()
-    query = websocket.query_params
-    group_id = query.get('group_id') or uuid.uuid4().hex
+    query_params = websocket.query_params
+    group_id = query_params.get('group_id') or uuid.uuid4().hex
     user_id = f'user_{uuid.uuid4().hex[:4]}'
 
     group = await get_group(group_id)
     group.users[user_id] = User(user_id, websocket)
 
     await websocket.send_text(json.dumps({
-        "type": "config",
-        "user_id": user_id,
-        "group_id": group_id
+        'type': 'config',
+        'user_id': user_id,
+        'group_id': group_id,
     }))
 
     try:
         await group.broadcast_group_state()
 
         while True:
-            data: dict[str, str] = json.loads(await websocket.receive_text())
-            user = group.users[user_id]
+            incoming_data: dict[str, str] = json.loads(await websocket.receive_text())
+            current_user = group.users[user_id]
 
-            if data.get('type') == 'register':
-                user.name = data.get('name') or user_id
-                user.color = data.get('color', '#cccccc')
-                user.last_activity = 'just now'
+            if incoming_data.get('type') == 'register':
+                current_user.name = incoming_data.get('name') or user_id
+                current_user.color = incoming_data.get('color', '#cccccc')
+                current_user.last_activity = 'just now'
 
-            elif data.get('type') == 'select_output':
-                target = data.get('id')
-                if target and target in group.output_devices:
-                    user.selected_output = target
+            elif incoming_data.get('type') == 'select_output':
+                selected_device = incoming_data.get('id')
+                if selected_device and selected_device in group.output_devices:
+                    current_user.selected_output = selected_device
                     await websocket.send_text(json.dumps({
                         'type': 'output_selected',
-                        'id': target
+                        'id': selected_device,
                     }))
                 else:
-                    user.selected_output = None
+                    current_user.selected_output = None
                     await websocket.send_text(json.dumps({
                         'type': 'output_selected',
-                        'id': None
+                        'id': None,
                     }))
 
-            elif data.get('type') == 'keypress':
-                if user.selected_output and user.selected_output in group.output_devices:
-                    output_websocket = group.output_devices[user.selected_output].websocket
-                    await output_websocket.send_text(json.dumps({
+            elif incoming_data.get('type') == 'keypress':
+                if current_user.selected_output in group.output_devices:
+                    output_ws = group.output_devices[current_user.selected_output].websocket
+                    await output_ws.send_text(json.dumps({
                         'type': 'key_event',
                         'user_id': user_id,
-                        'code': data.get('code'),
-                        'state': data.get('state'),
+                        'code': incoming_data.get('code'),
+                        'state': incoming_data.get('state'),
                     }))
 
-            elif data.get('type') == 'rename_output':
-                target = data.get('id')
-                new_name = data.get('name')
-                if target in group.output_devices and isinstance(new_name, str):
-                    old_name = group.output_devices[target].name
-                    group.output_devices[target].name = new_name.strip() or old_name
-                    output_websocket = group.output_devices[target].websocket
+            elif incoming_data.get('type') == 'rename_output':
+                target_id = incoming_data.get('id')
+                new_name = incoming_data.get('name')
+                if target_id in group.output_devices and isinstance(new_name, str):
+                    old_name = group.output_devices[target_id].name
+                    group.output_devices[target_id].name = new_name.strip() or old_name
+                    target_ws = group.output_devices[target_id].websocket
 
-                    await output_websocket.send_text(json.dumps({
+                    await target_ws.send_text(json.dumps({
                         'type': 'rename_output',
                         'name': new_name,
                     }))
-
                     await group.broadcast_group_state()
 
             await group.broadcast_group_state()
@@ -182,10 +186,10 @@ async def ws_user(websocket: WebSocket):
 @app.websocket('/ws/output')
 async def ws_output(websocket: WebSocket):
     await websocket.accept()
-    query = websocket.query_params
-    group_id = query.get('group_id') or uuid.uuid4().hex
+    query_params = websocket.query_params
+    group_id = query_params.get('group_id') or uuid.uuid4().hex
     output_device_id = f'output_{uuid.uuid4().hex[:4]}'
-    output_device_name = query.get('name') or output_device_id
+    output_device_name = query_params.get('name') or output_device_id
 
     group = await get_group(group_id)
     group.output_devices[output_device_id] = OutputDevice(output_device_id, websocket, output_device_name)
@@ -194,17 +198,18 @@ async def ws_output(websocket: WebSocket):
         'type': 'config',
         'output_device_id': output_device_id,
         'output_device_name': output_device_name,
-        'group_id': group_id
+        'group_id': group_id,
     }))
 
     await group.broadcast_group_state()
 
     try:
         while True:
-            data = json.loads(await websocket.receive_text())
-            if data.get('type') == 'rename' and 'name' in data:
-                group.output_devices[output_device_id].name = data['name']
+            incoming_data = json.loads(await websocket.receive_text())
+            if incoming_data.get('type') == 'rename' and 'name' in incoming_data:
+                group.output_devices[output_device_id].name = incoming_data['name']
                 await group.broadcast_group_state()
+
     except WebSocketDisconnect:
         group.output_devices.pop(output_device_id, None)
         await group.broadcast_group_state()
