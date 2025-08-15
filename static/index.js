@@ -298,15 +298,25 @@ function createDeviceCard(device) {
   connectedUsersSection.appendChild(connectedUsersLabel);
 
   const userListContainer = document.createElement("div");
-  device.connectedUsers.forEach((connectedUserId) => {
-    const userData = usersList.find((user) => user.id === connectedUserId);
-    const userTag = document.createElement("span");
-    userTag.className = "user-tag";
-    userTag.style.backgroundColor = userData?.color || "#ccc";
-    userTag.textContent =
-      userData?.id === userId ? `${userData.name} (You)` : userData?.name || "";
-    userListContainer.appendChild(userTag);
-  });
+
+  if (device.connectedUsers.length === 0) {
+    const noUsersHint = document.createElement("span");
+    noUsersHint.className = "text-muted fst-italic small";
+    noUsersHint.textContent = "No users connected";
+    userListContainer.appendChild(noUsersHint);
+  } else {
+    device.connectedUsers.forEach((connectedUserId) => {
+      const userData = usersList.find((user) => user.id === connectedUserId);
+      const userTag = document.createElement("span");
+      userTag.className = "user-tag";
+      userTag.style.backgroundColor = userData?.color || "#ccc";
+      userTag.textContent =
+        userData?.id === userId
+          ? `${userData.name} (You)`
+          : userData?.name || "";
+      userListContainer.appendChild(userTag);
+    });
+  }
 
   connectedUsersSection.appendChild(userListContainer);
 
