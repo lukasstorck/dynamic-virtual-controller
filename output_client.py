@@ -119,7 +119,7 @@ if __name__ == '__main__':
     parser.add_argument('--name', help='Output device display name', default=None)
     args = parser.parse_args()
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.new_event_loop()
     for signal_type in (signal.SIGINT, signal.SIGTERM):
         loop.add_signal_handler(signal_type, handle_sigint)
 
