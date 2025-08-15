@@ -20,6 +20,23 @@ SEMANTIC_TO_UINPUT = {
     'BTN_START': uinput.BTN_START,
 }
 
+DEFAULT_USER_BUTTON_MAP = {
+    'KeyW': 'BTN_DPAD_UP',
+    'KeyA': 'BTN_DPAD_LEFT',
+    'KeyS': 'BTN_DPAD_DOWN',
+    'KeyD': 'BTN_DPAD_RIGHT',
+    'KeyE': 'BTN_A',
+    'KeyQ': 'BTN_B',
+    'KeyX': 'BTN_X',
+    'KeyY': 'BTN_Y',
+    'Tab': 'BTN_TL',
+    'KeyR': 'BTN_TR',
+    'Escape': 'BTN_START',
+    'Space': 'BTN_A',
+    'KeyZ': 'BTN_Y',
+    'KeyF': 'BTN_Y',
+}
+
 
 class UInputController:
     '''Handles sending virtual gamepad events via uinput.'''
@@ -78,6 +95,11 @@ async def start_output_client(
                 print(f'[INFO] Connected as output {data["output_device_name"]} in group {data["group_id"]}')
                 print(f'[INFO] Available buttons: {", ".join(SEMANTIC_TO_UINPUT.keys())}')
                 print(f'[INFO] Open {http_url}/?group-id={group_id} to join group {group_id}')
+
+                await websocket.send(json.dumps({
+                    'type': 'button_map',
+                    'button_map': DEFAULT_USER_BUTTON_MAP,
+                }))
 
                 # message loop
                 while not stop_event.is_set():

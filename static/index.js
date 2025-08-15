@@ -1,21 +1,4 @@
 // === Constants ===
-const DEFAULT_BUTTON_MAP = {
-  KeyW: "BTN_DPAD_UP",
-  KeyA: "BTN_DPAD_LEFT",
-  KeyS: "BTN_DPAD_DOWN",
-  KeyD: "BTN_DPAD_RIGHT",
-  KeyE: "BTN_A",
-  KeyQ: "BTN_B",
-  KeyX: "BTN_X",
-  KeyY: "BTN_Y",
-  Tab: "BTN_TL",
-  KeyR: "BTN_TR",
-  Escape: "BTN_START",
-  Space: "BTN_A",
-  KeyZ: "BTN_Y",
-  KeyF: "BTN_Y",
-};
-
 const DEFAULT_COLOR = "#ff6f61";
 
 const STORAGE_NAME_KEY = "dvc_name";
@@ -121,6 +104,7 @@ function handleGroupStateMessage(data) {
     id: device.id,
     name: device.name,
     connectedUsers: device.connected_users || [],
+    buttonMap: device.button_map || {},
   }));
 
   const currentUser = usersList.find((user) => user.id === userId);
@@ -155,7 +139,10 @@ function sendButtonEvent(event, state) {
   if (event.target.contentEditable === "true") return;
   if (!selectedOutputId) return;
 
-  const buttonCode = DEFAULT_BUTTON_MAP[event.code];
+  const currentDevice = outputDevicesList.find(
+    (device) => device.id === selectedOutputId
+  );
+  const buttonCode = currentDevice?.buttonMap[event.code];
   if (!buttonCode) return;
 
   websocket.send(

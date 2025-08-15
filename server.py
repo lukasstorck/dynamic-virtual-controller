@@ -43,12 +43,14 @@ class OutputDevice:
         self.id = id
         self.websocket = websocket
         self.name = name or id
+        self.button_map: dict[str, str] = {}
 
     def serialize(self, connected_users: list[str]):
         return {
             'id': self.id,
             'name': self.name,
             'connected_users': connected_users,
+            'button_map': self.button_map,
         }
 
 
@@ -212,6 +214,11 @@ async def ws_output(websocket: WebSocket):
 
             if incoming_data.get('type') == 'rename' and 'name' in incoming_data:
                 output_device.name = incoming_data['name']
+                await group.broadcast_group_state()
+
+            elif incoming_data.get('type') == 'button_map':
+                button_map: dict[str, str] = incoming_data.get('button_map')
+                output_device.button_map = button_map
                 await group.broadcast_group_state()
 
     except WebSocketDisconnect:
