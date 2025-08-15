@@ -1,5 +1,6 @@
 import asyncio
 import json
+import time
 import uuid
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -24,7 +25,7 @@ class User:
         self.websocket = websocket
         self.name = name or id
         self.color = color
-        self.last_activity = 'just now'
+        self.last_activity = time.time()
         self.selected_output: str | None = None
 
     def serialize(self):
@@ -130,11 +131,11 @@ async def ws_user(websocket: WebSocket):
         while True:
             incoming_data: dict[str, str] = json.loads(await websocket.receive_text())
             current_user = group.users[user_id]
+            current_user.last_activity = time.time()
 
             if incoming_data.get('type') == 'register':
                 current_user.name = incoming_data.get('name') or user_id
                 current_user.color = incoming_data.get('color', '#cccccc')
-                current_user.last_activity = 'just now'
 
             elif incoming_data.get('type') == 'select_output':
                 selected_device = incoming_data.get('id')

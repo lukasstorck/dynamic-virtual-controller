@@ -168,6 +168,35 @@ function sendButtonEvent(event, state) {
 }
 
 // === Rendering Functions ===
+function formatLastActivity(timestamp) {
+  const secondsElapsed = Math.floor(Date.now() / 1000 - timestamp);
+
+  if (secondsElapsed < 2) return "just now";
+
+  const hours = Math.floor(secondsElapsed / 3600);
+  const minutes = Math.floor((secondsElapsed % 3600) / 60);
+  const seconds = secondsElapsed % 60;
+
+  let parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if ((hours === 0 && seconds > 0) || parts.length === 0)
+    parts.push(`${seconds}s`);
+
+  return parts.join(" ") + " ago";
+}
+
+function updateLastActivityFields() {
+  document
+    .querySelectorAll("#users-table-body td[data-timestamp]")
+    .forEach((cell) => {
+      const timestamp = parseFloat(cell.dataset.timestamp);
+      if (!isNaN(timestamp)) {
+        cell.textContent = formatLastActivity(timestamp);
+      }
+    });
+}
+
 function renderUsers() {
   usersTableBody.innerHTML = "";
 
@@ -191,7 +220,8 @@ function renderUsers() {
     nameCell.appendChild(nameTag);
 
     const activityCell = document.createElement("td");
-    activityCell.textContent = user.lastActivity;
+    activityCell.dataset.timestamp = user.lastActivity;
+    activityCell.textContent = formatLastActivity(user.lastActivity);
 
     const devicesCell = document.createElement("td");
     devicesCell.textContent = user.devices
@@ -435,3 +465,4 @@ window.addEventListener("DOMContentLoaded", () => {
   colorInput.value = storedColor;
   removeGroupIdFromUrl();
 });
+setInterval(updateLastActivityFields, 1000);
