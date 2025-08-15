@@ -173,7 +173,6 @@ async def ws_user(websocket: WebSocket):
                         'type': 'rename_output',
                         'name': new_name,
                     }))
-                    await group.broadcast_group_state()
 
             await group.broadcast_group_state()
 
