@@ -1,10 +1,10 @@
+import argparse
 import asyncio
 import json
-import argparse
-import uinput
-import urllib.parse
 import pathlib
 import signal
+import uinput
+import urllib.parse
 import websockets
 import yaml
 

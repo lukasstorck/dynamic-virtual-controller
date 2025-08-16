@@ -1,14 +1,13 @@
 import asyncio
+import fastapi
+import fastapi.staticfiles
 import json
+import pathlib
 import time
 import urllib.parse
 import uuid
-from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 
-app = FastAPI()
+app = fastapi.FastAPI()
 
 groups: dict[str, 'Group'] = {}
 groups_lock = asyncio.Lock()
@@ -18,7 +17,7 @@ class User:
     def __init__(
         self,
         id: str,
-        websocket: WebSocket,
+        websocket: fastapi.WebSocket,
         name: str | None = None,
         color: str | None = None,
     ):
@@ -40,7 +39,7 @@ class User:
 
 
 class OutputDevice:
-    def __init__(self, id: str, websocket: WebSocket, name: str | None = None):
+    def __init__(self, id: str, websocket: fastapi.WebSocket, name: str | None = None):
         self.id = id
         self.websocket = websocket
         self.name = name or id
@@ -104,24 +103,24 @@ async def get_group(group_id: str):
 
 
 # === Static Files ===
-static_dir = Path(__file__).parent / 'static'
+static_dir = pathlib.Path(__file__).parent / 'static'
 static_dir.mkdir(exist_ok=True)
-app.mount('/static', StaticFiles(directory=static_dir), name='static')
+app.mount('/static', fastapi.staticfiles.StaticFiles(directory=static_dir), name='static')
 
 
 @app.get('/')
 async def index():
-    return FileResponse(static_dir / 'index.html')
+    return fastapi.responses.FileResponse(static_dir / 'index.html')
 
 
 @app.get('/favicon.ico')
 async def favicon():
-    return FileResponse(static_dir / 'favicon.ico')
+    return fastapi.responses.FileResponse(static_dir / 'favicon.ico')
 
 
 # === User WebSocket ===
 @app.websocket('/ws/user')
-async def ws_user(websocket: WebSocket):
+async def ws_user(websocket: fastapi.WebSocket):
     await websocket.accept()
     query_params = websocket.query_params
     group_id = query_params.get('group_id') or uuid.uuid4().hex
@@ -199,14 +198,14 @@ async def ws_user(websocket: WebSocket):
                     }))
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
-    except WebSocketDisconnect:
+    except fastapi.WebSocketDisconnect:
         group.users.pop(user.id, None)
         await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
 
 # === Output WebSocket ===
 @app.websocket('/ws/output')
-async def ws_output(websocket: WebSocket):
+async def ws_output(websocket: fastapi.WebSocket):
     await websocket.accept()
     query_params = websocket.query_params
     group_id = query_params.get('group_id') or uuid.uuid4().hex
@@ -236,7 +235,7 @@ async def ws_output(websocket: WebSocket):
                 output_device.keybind_presets = keybind_presets
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
-    except WebSocketDisconnect:
+    except fastapi.WebSocketDisconnect:
         for user in group.users.values():
             if output_device.id in user.selected_output_devices:
                 user.selected_output_devices.pop(output_device.id, None)
