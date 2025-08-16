@@ -441,8 +441,10 @@ function handleLeaveGroup(event) {
     websocket.close();
     websocket = null;
   }
+  selectedOutputId = null;
   groupId = null;
   activeGroupIdElement.textContent = "";
+  userId = null;
   usersList = [];
   outputDevicesList = [];
   renderUsers();
