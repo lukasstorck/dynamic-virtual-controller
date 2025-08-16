@@ -147,6 +147,7 @@ async def ws_user(websocket: WebSocket):
             if incoming_data.get('type') == 'register':
                 current_user.name = incoming_data.get('name') or user_id
                 current_user.color = incoming_data.get('color', '#cccccc')
+                await group.broadcast(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'select_output':
                 selected_device = incoming_data.get('id')
@@ -162,6 +163,7 @@ async def ws_user(websocket: WebSocket):
                         'type': 'output_selected',
                         'id': None,
                     }))
+                await group.broadcast(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'keypress':
                 if current_user.selected_output in group.output_devices:
@@ -172,6 +174,11 @@ async def ws_user(websocket: WebSocket):
                         'code': incoming_data.get('code'),
                         'state': incoming_data.get('state'),
                     }))
+                await group.broadcast_to_users(json.dumps({
+                    'type': 'activity',
+                    'user_id': user_id,
+                    'timestamp': time.time(),
+                }))
 
             elif incoming_data.get('type') == 'rename_output':
                 target_id = incoming_data.get('id')
@@ -185,8 +192,7 @@ async def ws_user(websocket: WebSocket):
                         'type': 'rename_output',
                         'name': new_name,
                     }))
-
-            await group.broadcast(json.dumps(group.serialize_state()))
+                await group.broadcast(json.dumps(group.serialize_state()))
 
     except WebSocketDisconnect:
         group.users.pop(user_id, None)

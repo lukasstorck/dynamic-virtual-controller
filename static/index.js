@@ -78,6 +78,8 @@ function handleWebSocketMessage(event) {
     handleGroupStateMessage(data);
   } else if (data.type === "output_selected") {
     selectedOutputId = data.id || null;
+  } else if (data.type === "activity") {
+    handleUserActivityMessage(data);
   }
 }
 
@@ -115,6 +117,11 @@ function handleGroupStateMessage(data) {
 
   renderUsers();
   renderOutputDevices();
+}
+
+function handleUserActivityMessage(data) {
+  const user = usersList.find((user) => user.id === data.user_id);
+  if (user) user.lastActivity = data.timestamp;
 }
 
 // === User Data Updates ===
@@ -178,11 +185,11 @@ function formatLastActivity(timestamp) {
 
 function updateLastActivityFields() {
   document
-    .querySelectorAll("#users-table-body td[data-timestamp]")
+    .querySelectorAll("#users-table-body td[data-user-id]")
     .forEach((cell) => {
-      const timestamp = parseFloat(cell.dataset.timestamp);
-      if (!isNaN(timestamp)) {
-        cell.textContent = formatLastActivity(timestamp);
+      const user = usersList.find((user) => user.id === cell.dataset.userId);
+      if (!isNaN(user.lastActivity)) {
+        cell.textContent = formatLastActivity(user.lastActivity);
       }
     });
 }
@@ -210,7 +217,7 @@ function renderUsers() {
     nameCell.appendChild(nameTag);
 
     const activityCell = document.createElement("td");
-    activityCell.dataset.timestamp = user.lastActivity;
+    activityCell.dataset.userId = user.id;
     activityCell.textContent = formatLastActivity(user.lastActivity);
 
     const devicesCell = document.createElement("td");
