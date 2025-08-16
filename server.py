@@ -13,6 +13,22 @@ groups: dict[str, 'Group'] = {}
 groups_lock = asyncio.Lock()
 
 
+def is_too_white(hex_color: str, threshold: int = 240):
+    '''Return True if the hex color is close to white.'''
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) == 3:  # expand shorthand like #fff
+        hex_color = ''.join(c * 2 for c in hex_color)
+
+    try:
+        r, g, b = tuple(int(hex_color[i:i + 2], 16) for i in (0, 2, 4))
+    except ValueError:
+        return True  # invalid = reject
+
+    # perceived luminance formula
+    luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return luminance > threshold
+
+
 class User:
     def __init__(
         self,
@@ -24,7 +40,11 @@ class User:
         self.id = id
         self.websocket = websocket
         self.name = name or id
-        self.color = color or '#ff6f61'
+
+        if color == '' or is_too_white(color):
+            color = '#ff6f61'
+        self.color = color
+
         self.last_activity = time.time()
         self.selected_output_devices: dict[str, bool] = {}
 
@@ -128,8 +148,8 @@ async def ws_user(websocket: fastapi.WebSocket):
     user = User(
         id=f'user_{uuid.uuid4().hex[:4]}',
         websocket=websocket,
-        name=urllib.parse.unquote_plus(query_params.get('name')),
-        color=urllib.parse.unquote_plus(query_params.get('color')),
+        name=urllib.parse.unquote_plus(query_params.get('name', '')).strip(),
+        color=urllib.parse.unquote_plus(query_params.get('color', '')).strip().lower(),
     )
 
     group = await get_group(group_id)
@@ -151,7 +171,9 @@ async def ws_user(websocket: fastapi.WebSocket):
 
             if incoming_data.get('type') == 'update_user_data':
                 user.name = incoming_data.get('name')
-                user.color = incoming_data.get('color')
+                color = incoming_data.get('color').lower().strip()
+                if color != '' and not is_too_white(color):
+                    user.color = incoming_data.get('color')
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'select_output':
