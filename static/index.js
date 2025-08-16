@@ -376,11 +376,11 @@ function createDeviceCard(device) {
       const userData = usersList.find((user) => user.id === connectedUserId);
       const userTag = document.createElement("span");
       userTag.className = "user-tag";
-      userTag.style.backgroundColor = userData?.color || "#ccc";
+      userTag.style.backgroundColor = userData.color;
       userTag.textContent =
-        userData?.id === userId
+        userData.id === userId
           ? `${userData.name} (You)`
-          : userData?.name || "";
+          : userData.name;
       userListContainer.appendChild(userTag);
     });
   }
