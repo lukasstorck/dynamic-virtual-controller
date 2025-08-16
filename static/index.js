@@ -6,7 +6,7 @@ const STORAGE_COLOR_KEY = "dvc_color";
 
 // === Application State ===
 let websocket = null;
-let selectedOutputId = null;
+let selectedOutputDeviceIds = [];
 let groupId = null;
 let userId = null;
 let userName = null;
@@ -76,8 +76,6 @@ function handleWebSocketMessage(event) {
     handleConfigMessage(data);
   } else if (data.type === "group_state") {
     handleGroupStateMessage(data);
-  } else if (data.type === "output_selected") {
-    selectedOutputId = data.id || null;
   } else if (data.type === "activity") {
     handleUserActivityMessage(data);
   }
@@ -100,7 +98,7 @@ function handleGroupStateMessage(data) {
     name: user.name,
     color: user.color,
     lastActivity: user.lastActivity,
-    devices: user.selected_output ? [user.selected_output] : [],
+    selectedOutputDevices: user.selected_output_devices,
   }));
 
   outputDevicesList = (data.output_devices || []).map((device) => ({
@@ -110,10 +108,9 @@ function handleGroupStateMessage(data) {
     keybindPresets: device.keybind_presets || {},
   }));
 
+  // update selected device id list
   const currentUser = usersList.find((user) => user.id === userId);
-  selectedOutputId = currentUser
-    ? currentUser.devices[0] || null
-    : selectedOutputId;
+  selectedOutputDeviceIds = currentUser.selectedOutputDevices;
 
   renderUsers();
   renderOutputDevices();
@@ -145,23 +142,24 @@ function updateUserData() {
 function sendButtonEvent(event, state) {
   // do not toggle, when editing device name
   if (event.target.contentEditable === "true") return;
-  if (!selectedOutputId) return;
 
-  const currentDevice = outputDevicesList.find(
-    (device) => device.id === selectedOutputId
-  );
+  for (const deviceId of selectedOutputDeviceIds) {
+    const keybindsName = deviceIdToKeybindsNameMap[deviceId];
+    const currentDevice = outputDevicesList.find(
+      (device) => device.id === deviceId
+    );
+    const buttonCode = currentDevice?.keybindPresets[keybindsName][event.code];
+    if (!buttonCode) return;
 
-  const keybindsName = deviceIdToKeybindsNameMap[currentDevice.id];
-  const buttonCode = currentDevice?.keybindPresets[keybindsName][event.code];
-  if (!buttonCode) return;
-
-  websocket.send(
-    JSON.stringify({
-      type: "keypress",
-      code: buttonCode,
-      state,
-    })
-  );
+    websocket.send(
+      JSON.stringify({
+        type: "keypress",
+        device_id: currentDevice.id,
+        code: buttonCode,
+        state,
+      })
+    );
+  }
 }
 
 // === Rendering Functions ===
@@ -221,7 +219,7 @@ function renderUsers() {
     activityCell.textContent = formatLastActivity(user.lastActivity);
 
     const devicesCell = document.createElement("td");
-    devicesCell.textContent = user.devices
+    devicesCell.textContent = user.selectedOutputDevices
       .map(
         (deviceId) =>
           outputDevicesList.find((device) => device.id === deviceId)?.name
@@ -257,7 +255,7 @@ function createDeviceCard(device) {
   const card = document.createElement("div");
   card.className = "card h-100 shadow-sm";
   card.style.cursor = "pointer";
-  if (selectedOutputId === device.id) {
+  if (selectedOutputDeviceIds.includes(device.id)) {
     card.classList.add("border-3");
     card.style.boxShadow = "0 0 0 0.25rem rgba(13,110,253,0.12)";
   }
@@ -420,8 +418,16 @@ function toggleDeviceConnection(event, deviceId) {
   if (["select", "option"].includes(event.target.tagName.toLowerCase())) return;
   if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
 
-  const newTarget = selectedOutputId === deviceId ? null : deviceId;
-  websocket.send(JSON.stringify({ type: "select_output", id: newTarget }));
+  const currentDeviceConnectionState =
+    selectedOutputDeviceIds.includes(deviceId);
+  // toggle connection state
+  websocket.send(
+    JSON.stringify({
+      type: "select_output",
+      id: deviceId,
+      state: !currentDeviceConnectionState,
+    })
+  );
 }
 
 // === UI Event Handlers ===
@@ -441,7 +447,7 @@ function handleLeaveGroup(event) {
     websocket.close();
     websocket = null;
   }
-  selectedOutputId = null;
+  selectedOutputDeviceIds = [];
   groupId = null;
   activeGroupIdElement.textContent = "";
   userId = null;

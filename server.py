@@ -26,7 +26,7 @@ class User:
         self.name = name or id
         self.color = color
         self.last_activity = time.time()
-        self.selected_output: str | None = None
+        self.selected_output_devices: dict[str, bool] = {}
 
     def serialize(self):
         return {
@@ -34,7 +34,7 @@ class User:
             'name': self.name,
             'color': self.color,
             'lastActivity': self.last_activity,
-            'selected_output': self.selected_output,
+            'selected_output_devices': [device_id for device_id, state in self.selected_output_devices.items() if state],
         }
 
 
@@ -67,7 +67,7 @@ class Group:
         for output_device in self.output_devices.values():
             connected_users = [
                 user.id for user in self.users.values()
-                if user.selected_output == output_device.id
+                if output_device.id in user.selected_output_devices
             ]
             output_devices_data.append(output_device.serialize(connected_users))
 
@@ -151,29 +151,28 @@ async def ws_user(websocket: WebSocket):
 
             elif incoming_data.get('type') == 'select_output':
                 selected_device = incoming_data.get('id')
+                state = incoming_data.get('state')
                 if selected_device and selected_device in group.output_devices:
-                    current_user.selected_output = selected_device
-                    await websocket.send_text(json.dumps({
-                        'type': 'output_selected',
-                        'id': selected_device,
-                    }))
-                else:
-                    current_user.selected_output = None
-                    await websocket.send_text(json.dumps({
-                        'type': 'output_selected',
-                        'id': None,
-                    }))
-                await group.broadcast(json.dumps(group.serialize_state()))
+                    if state:
+                        current_user.selected_output_devices[selected_device] = True
+                    else:
+                        del current_user.selected_output_devices[selected_device]
+                await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'keypress':
-                if current_user.selected_output in group.output_devices:
-                    output_websocket = group.output_devices[current_user.selected_output].websocket
-                    await output_websocket.send_text(json.dumps({
-                        'type': 'key_event',
-                        'user_id': user_id,
-                        'code': incoming_data.get('code'),
-                        'state': incoming_data.get('state'),
-                    }))
+                device_id = incoming_data.get('device_id')
+                if device_id not in current_user.selected_output_devices or device_id not in group.output_devices:
+                    return
+
+                selected_device = group.output_devices[device_id]
+
+                await selected_device.websocket.send_text(json.dumps({
+                    'type': 'key_event',
+                    'user_id': user_id,
+                    'code': incoming_data.get('code'),
+                    'state': incoming_data.get('state'),
+                }))
+
                 await group.broadcast_to_users(json.dumps({
                     'type': 'activity',
                     'user_id': user_id,
@@ -236,6 +235,10 @@ async def ws_output(websocket: WebSocket):
                 await group.broadcast(json.dumps(group.serialize_state()))
 
     except WebSocketDisconnect:
+        for user in group.users.values():
+            if output_device.id in user.selected_output_devices:
+                user.selected_output_devices.pop(output_device.id, None)
+
         group.output_devices.pop(output_device.id, None)
         await group.broadcast(json.dumps(group.serialize_state()))
         print(f'[{group.id}] Output {output_device.id} disconnected.')
