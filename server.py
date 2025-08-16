@@ -78,13 +78,21 @@ class Group:
             'output_devices': output_devices_data,
         }
 
-    async def broadcast_group_state(self):
-        group_state_message = json.dumps(self.serialize_state())
-        for participant in list(self.users.values()) + list(self.output_devices.values()):
+    async def broadcast(self, message: str, receivers: list[User | OutputDevice] = None):
+        if receivers is None:
+            receivers = list(self.users.values()) + list(self.output_devices.values())
+
+        for receiver in receivers:
             try:
-                await participant.websocket.send_text(group_state_message)
+                await receiver.websocket.send_text(message)
             except Exception:
                 pass
+
+    async def broadcast_to_users(self, message: str):
+        await self.broadcast(message, list(self.users.values()))
+
+    async def broadcast_to_output_devices(self, message: str):
+        await self.broadcast(message, list(self.output_devices.values()))
 
 
 async def get_group(group_id: str):
@@ -128,7 +136,7 @@ async def ws_user(websocket: WebSocket):
     }))
 
     try:
-        await group.broadcast_group_state()
+        await group.broadcast(json.dumps(group.serialize_state()))
 
         while True:
             message = await websocket.receive_text()
@@ -157,8 +165,8 @@ async def ws_user(websocket: WebSocket):
 
             elif incoming_data.get('type') == 'keypress':
                 if current_user.selected_output in group.output_devices:
-                    output_ws = group.output_devices[current_user.selected_output].websocket
-                    await output_ws.send_text(json.dumps({
+                    output_websocket = group.output_devices[current_user.selected_output].websocket
+                    await output_websocket.send_text(json.dumps({
                         'type': 'key_event',
                         'user_id': user_id,
                         'code': incoming_data.get('code'),
@@ -178,11 +186,11 @@ async def ws_user(websocket: WebSocket):
                         'name': new_name,
                     }))
 
-            await group.broadcast_group_state()
+            await group.broadcast(json.dumps(group.serialize_state()))
 
     except WebSocketDisconnect:
         group.users.pop(user_id, None)
-        await group.broadcast_group_state()
+        await group.broadcast(json.dumps(group.serialize_state()))
 
 
 # === Output WebSocket ===
@@ -205,7 +213,7 @@ async def ws_output(websocket: WebSocket):
         'group_id': group_id,
     }))
 
-    await group.broadcast_group_state()
+    await group.broadcast(json.dumps(group.serialize_state()))
 
     try:
         while True:
@@ -214,16 +222,16 @@ async def ws_output(websocket: WebSocket):
 
             if incoming_data.get('type') == 'rename' and 'name' in incoming_data:
                 output_device.name = incoming_data['name']
-                await group.broadcast_group_state()
+                await group.broadcast(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'set_keybind_presets':
                 keybind_presets: dict[str, str] = incoming_data.get('keybind_presets')
                 output_device.keybind_presets = keybind_presets
-                await group.broadcast_group_state()
+                await group.broadcast(json.dumps(group.serialize_state()))
 
     except WebSocketDisconnect:
         group.output_devices.pop(output_device.id, None)
-        await group.broadcast_group_state()
+        await group.broadcast(json.dumps(group.serialize_state()))
         print(f'[{group.id}] Output {output_device.id} disconnected.')
 
 
