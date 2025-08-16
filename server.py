@@ -225,11 +225,7 @@ async def ws_output(websocket: WebSocket):
             message = await websocket.receive_text()
             incoming_data: dict = json.loads(message)
 
-            if incoming_data.get('type') == 'rename' and 'name' in incoming_data:
-                output_device.name = incoming_data['name']
-                await group.broadcast(json.dumps(group.serialize_state()))
-
-            elif incoming_data.get('type') == 'set_keybind_presets':
+            if incoming_data.get('type') == 'set_keybind_presets':
                 keybind_presets: dict[str, str] = incoming_data.get('keybind_presets')
                 output_device.keybind_presets = keybind_presets
                 await group.broadcast(json.dumps(group.serialize_state()))
