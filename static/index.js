@@ -12,6 +12,7 @@ let userId = null;
 let userName = null;
 let usersList = [];
 let outputDevicesList = [];
+let deviceIdToKeybindsNameMap = {};
 
 // === DOM Elements ===
 const nameInput = document.getElementById("user-name");
@@ -142,7 +143,9 @@ function sendButtonEvent(event, state) {
   const currentDevice = outputDevicesList.find(
     (device) => device.id === selectedOutputId
   );
-  const buttonCode = currentDevice?.keybindPresets["default"][event.code];
+
+  const keybindsName = deviceIdToKeybindsNameMap[currentDevice.id];
+  const buttonCode = currentDevice?.keybindPresets[keybindsName][event.code];
   if (!buttonCode) return;
 
   websocket.send(
@@ -242,7 +245,7 @@ function renderOutputDevices() {
 
 function createDeviceCard(device) {
   const column = document.createElement("div");
-  column.className = "col-md-4 col-lg-3";
+  column.className = "col-md-6 col-lg-5 col-xl-4";
 
   const card = document.createElement("div");
   card.className = "card h-100 shadow-sm";
@@ -301,13 +304,51 @@ function createDeviceCard(device) {
   saveButton.appendChild(checkIcon);
   titleWrapper.append(titleElement, saveButton);
 
-  const mapButton = document.createElement("button");
-  mapButton.className = "btn btn-sm btn-outline-primary mb-2";
-  mapButton.textContent = "Open Button Map";
-  mapButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    alert(`Button map for ${device.name}`);
+  // === Keybinds selector & edit button ===
+  const keybindsWrapper = document.createElement("div");
+  keybindsWrapper.className = "d-flex align-items-center gap-2 mb-2";
+
+  const dropdownLabel = document.createElement("label");
+  dropdownLabel.className = "form-label mb-0 small text-nowrap";
+  dropdownLabel.textContent = "Keybinds:";
+
+  const dropdown = document.createElement("select");
+  dropdown.className = "form-select form-select-sm flex-grow-1 mb-0";
+
+  Object.keys(device.keybindPresets).forEach((keybindsName) => {
+    const option = document.createElement("option");
+    option.value = keybindsName;
+    option.textContent = keybindsName;
+    if (!deviceIdToKeybindsNameMap[device.id]) {
+      deviceIdToKeybindsNameMap[device.id] = keybindsName;
+    }
+
+    if (keybindsName === deviceIdToKeybindsNameMap[device.id]) {
+      option.selected = true;
+    }
+    dropdown.appendChild(option);
   });
+
+  dropdown.addEventListener("change", (event) => {
+    deviceIdToKeybindsNameMap[device.id] = event.target.value;
+    event.target.blur();
+  });
+
+  const editButton = document.createElement("button");
+  editButton.className =
+    "btn btn-sm btn-outline-secondary d-inline-flex align-items-center justify-content-center flex-shrink-0 px-2 py-0";
+  const editIcon = document.createElement("span");
+  editIcon.className = "material-symbols-outlined";
+  editIcon.textContent = "edit";
+
+  editButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const selectedKeybinds = dropdown.value;
+    alert(`Edit Keybinds "${selectedKeybinds}" for ${device.name}`);
+  });
+
+  editButton.appendChild(editIcon);
+  keybindsWrapper.append(dropdownLabel, dropdown, editButton);
 
   const connectedUsersSection = document.createElement("div");
   const connectedUsersLabel = document.createElement("strong");
@@ -337,7 +378,7 @@ function createDeviceCard(device) {
 
   connectedUsersSection.appendChild(userListContainer);
 
-  body.append(titleWrapper, mapButton, connectedUsersSection);
+  body.append(titleWrapper, keybindsWrapper, connectedUsersSection);
   card.appendChild(body);
   column.appendChild(card);
 
@@ -369,6 +410,7 @@ function sendDeviceNameUpdate(device, titleElement, saveButton) {
 function toggleDeviceConnection(event, deviceId) {
   // do not toggle, when editing device name
   if (event.target.contentEditable === "true") return;
+  if (["select", "option"].includes(event.target.tagName.toLowerCase())) return;
   if (!websocket || websocket.readyState !== WebSocket.OPEN) return;
 
   const newTarget = selectedOutputId === deviceId ? null : deviceId;
