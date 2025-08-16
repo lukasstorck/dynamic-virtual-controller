@@ -214,7 +214,7 @@ function renderUsers() {
     const nameCell = document.createElement("td");
     const nameTag = document.createElement("span");
     nameTag.className = "user-tag";
-    nameTag.style.backgroundColor = user.color || "#ccc";
+    nameTag.style.backgroundColor = user.color;
     nameTag.textContent = user.id === userId ? `${user.name} (You)` : user.name;
     nameCell.appendChild(nameTag);
 
