@@ -223,7 +223,7 @@ async def ws_output(websocket: WebSocket):
     try:
         while True:
             message = await websocket.receive_text()
-            incoming_data = json.loads(message)
+            incoming_data: dict = json.loads(message)
 
             if incoming_data.get('type') == 'rename' and 'name' in incoming_data:
                 output_device.name = incoming_data['name']
