@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+import urllib.parse
 import uuid
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -19,12 +20,12 @@ class User:
         id: str,
         websocket: WebSocket,
         name: str | None = None,
-        color: str = '#cccccc',
+        color: str | None = None,
     ):
         self.id = id
         self.websocket = websocket
         self.name = name or id
-        self.color = color
+        self.color = color or '#ff6f61'
         self.last_activity = time.time()
         self.selected_output_devices: dict[str, bool] = {}
 
@@ -124,14 +125,20 @@ async def ws_user(websocket: WebSocket):
     await websocket.accept()
     query_params = websocket.query_params
     group_id = query_params.get('group_id') or uuid.uuid4().hex
-    user_id = f'user_{uuid.uuid4().hex[:4]}'
+
+    user = User(
+        id=f'user_{uuid.uuid4().hex[:4]}',
+        websocket=websocket,
+        name=urllib.parse.unquote_plus(query_params.get('name')),
+        color=urllib.parse.unquote_plus(query_params.get('color')),
+    )
 
     group = await get_group(group_id)
-    group.users[user_id] = User(user_id, websocket)
+    group.users[user.id] = user
 
     await websocket.send_text(json.dumps({
         'type': 'config',
-        'user_id': user_id,
+        'user_id': user.id,
         'group_id': group_id,
     }))
 
@@ -141,12 +148,11 @@ async def ws_user(websocket: WebSocket):
         while True:
             message = await websocket.receive_text()
             incoming_data: dict[str, str] = json.loads(message)
-            current_user = group.users[user_id]
-            current_user.last_activity = time.time()
+            user.last_activity = time.time()
 
-            if incoming_data.get('type') == 'register':
-                current_user.name = incoming_data.get('name') or user_id
-                current_user.color = incoming_data.get('color', '#cccccc')
+            if incoming_data.get('type') == 'update_user_data':
+                user.name = incoming_data.get('name')
+                user.color = incoming_data.get('color')
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'select_output':
@@ -154,28 +160,28 @@ async def ws_user(websocket: WebSocket):
                 state = incoming_data.get('state')
                 if selected_device and selected_device in group.output_devices:
                     if state:
-                        current_user.selected_output_devices[selected_device] = True
+                        user.selected_output_devices[selected_device] = True
                     else:
-                        del current_user.selected_output_devices[selected_device]
+                        del user.selected_output_devices[selected_device]
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'keypress':
                 device_id = incoming_data.get('device_id')
-                if device_id not in current_user.selected_output_devices or device_id not in group.output_devices:
+                if device_id not in user.selected_output_devices or device_id not in group.output_devices:
                     return
 
                 selected_device = group.output_devices[device_id]
 
                 await selected_device.websocket.send_text(json.dumps({
                     'type': 'key_event',
-                    'user_id': user_id,
+                    'user_id': user.id,
                     'code': incoming_data.get('code'),
                     'state': incoming_data.get('state'),
                 }))
 
                 await group.broadcast_to_users(json.dumps({
                     'type': 'activity',
-                    'user_id': user_id,
+                    'user_id': user.id,
                     'timestamp': time.time(),
                 }))
 
@@ -194,7 +200,7 @@ async def ws_user(websocket: WebSocket):
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
     except WebSocketDisconnect:
-        group.users.pop(user_id, None)
+        group.users.pop(user.id, None)
         await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
 

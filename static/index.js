@@ -55,7 +55,13 @@ function connectToGroup(newGroupId) {
 
   let protocol = window.location.protocol === "https:" ? "wss" : "ws";
   let url = `${protocol}://${window.location.host}/ws/user`;
-  if (newGroupId) url += `?group_id=${newGroupId}`;
+
+  const params = new URLSearchParams();
+  params.append("name", encodeURIComponent(userName));
+  params.append("color", encodeURIComponent(colorInput.value));
+  if (newGroupId) params.append("group_id", newGroupId);
+
+  if (params.toString()) url += `?${params.toString()}`;
   websocket = new WebSocket(url);
 
   websocket.onmessage = handleWebSocketMessage;
@@ -88,8 +94,6 @@ function handleConfigMessage(data) {
 
   joinGroupContainer.classList.add("d-none");
   leaveGroupContainer.classList.remove("d-none");
-
-  updateUserData();
 }
 
 function handleGroupStateMessage(data) {
@@ -130,7 +134,7 @@ function updateUserData() {
   if (websocket?.readyState === WebSocket.OPEN) {
     websocket.send(
       JSON.stringify({
-        type: "register",
+        type: "update_user_data",
         name: userName,
         color: currentColor,
       })
