@@ -299,7 +299,7 @@ function createDeviceCard(device) {
   titleElement.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault(); // prevent new line
-      sendDeviceNameUpdate(device, titleElement, saveButton);
+      sendDeviceNameUpdate(device, titleElement);
       titleElement.blur();
     }
   });
@@ -307,7 +307,7 @@ function createDeviceCard(device) {
   // Save on button click
   saveButton.addEventListener("click", (event) => {
     event.stopPropagation();
-    sendDeviceNameUpdate(device, titleElement, saveButton);
+    sendDeviceNameUpdate(device, titleElement);
   });
 
   saveButton.appendChild(checkIcon);
@@ -394,7 +394,7 @@ function createDeviceCard(device) {
   return column;
 }
 
-function sendDeviceNameUpdate(device, titleElement, saveButton) {
+function sendDeviceNameUpdate(device, titleElement) {
   const newName = titleElement.textContent.trim();
   if (!newName) {
     // do not accept empty name
