@@ -33,7 +33,7 @@ class User:
             'id': self.id,
             'name': self.name,
             'color': self.color,
-            'lastActivity': self.last_activity,
+            'last_activity': self.last_activity,
             'selected_output_devices': [device_id for device_id, state in self.selected_output_devices.items() if state],
         }
 

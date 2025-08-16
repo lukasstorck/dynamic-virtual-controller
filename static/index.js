@@ -97,7 +97,7 @@ function handleGroupStateMessage(data) {
     id: user.id,
     name: user.name,
     color: user.color,
-    lastActivity: user.lastActivity,
+    lastActivity: user.last_activity,
     selectedOutputDevices: user.selected_output_devices,
   }));
 
