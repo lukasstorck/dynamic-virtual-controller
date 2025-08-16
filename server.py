@@ -220,7 +220,7 @@ async def ws_output(websocket: WebSocket):
     await websocket.send_text(json.dumps({
         'type': 'config',
         'output_device_id': output_device.id,
-        'output_device_name': output_device.name,
+        'output_device_name': urllib.parse.unquote_plus(output_device.name),
         'group_id': group_id,
     }))
 

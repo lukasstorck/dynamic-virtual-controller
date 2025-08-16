@@ -2,6 +2,7 @@ import asyncio
 import json
 import argparse
 import uinput
+import urllib.parse
 import pathlib
 import signal
 import websockets
@@ -65,7 +66,7 @@ async def start_output_client(
     while not stop_event.is_set():
         connection_uri = f'{ws_url}?group_id={group_id}'
         if device_name:
-            connection_uri += f'&name={device_name}'
+            connection_uri += f'&name={urllib.parse.quote_plus(device_name)}'
 
         try:
             async with websockets.connect(connection_uri) as websocket:
