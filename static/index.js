@@ -213,7 +213,7 @@ function renderUsers() {
 
     const nameCell = document.createElement("td");
     const nameTag = document.createElement("span");
-    nameTag.className = "user-tag";
+    nameTag.className = "d-inline-block px-2 py-1 rounded text-white small m-1";
     nameTag.style.backgroundColor = user.color;
     nameTag.textContent = user.id === userId ? `${user.name} (You)` : user.name;
     nameCell.appendChild(nameTag);
@@ -375,12 +375,11 @@ function createDeviceCard(device) {
     device.connectedUsers.forEach((connectedUserId) => {
       const userData = usersList.find((user) => user.id === connectedUserId);
       const userTag = document.createElement("span");
-      userTag.className = "user-tag";
+      userTag.className =
+        "d-inline-block px-2 py-1 rounded text-white small m-1";
       userTag.style.backgroundColor = userData.color;
       userTag.textContent =
-        userData.id === userId
-          ? `${userData.name} (You)`
-          : userData.name;
+        userData.id === userId ? `${userData.name} (You)` : userData.name;
       userListContainer.appendChild(userTag);
     });
   }
