@@ -65,9 +65,12 @@ async def connect_once(
         if data.get('type') != 'config':
             raise ConnectionAbortedError(f'Unexpected initial message: {data}')
 
-        print(f'[INFO] Connected as output {data["output_device_name"]} in group {data["group_id"]}')
+        device_name = data.get('output_device_name')
+        device_id = data.get('output_device_id')
+        group_id = data.get('group_id')
+        print(f'[INFO] Connected as output {device_name} ({device_id}) in group {group_id}')
         print(f'[INFO] Available buttons: {", ".join(SEMANTIC_TO_UINPUT.keys())}')
-        print(f'[INFO] Open {http_url}/?group-id={group_id} to join group {group_id}')
+        print(f'[INFO] Open {http_url}/?group_id={group_id} to join group {group_id}')
 
         await websocket.send(json.dumps({
             'type': 'set_keybind_presets',
@@ -92,6 +95,7 @@ async def connect_once(
                     continue
                 print('[WARN] Connection to server lost. Reconnecting...')
                 break
+        return group_id, device_name
 
 
 async def start_output_client(
@@ -128,7 +132,7 @@ async def start_output_client(
         success = False
         for family in families_to_try:
             try:
-                await connect_once(connection_uri, family, controller, http_url, group_id, keybind_presets)
+                group_id, device_name = await connect_once(connection_uri, family, controller, http_url, group_id, keybind_presets)
                 success = True
             except (ConnectionAbortedError, ConnectionRefusedError, OSError) as error:
                 print(f'[WARN] Connection attempt with {"IPv6" if family == socket.AF_INET6 else "IPv4"} failed: {error}')
@@ -174,12 +178,9 @@ if __name__ == '__main__':
     port = args.port or config.get('port', 8000)
     ip_version = args.ip_version or str(config.get('ip_version', 'auto')).lower()
     secure = args.secure or config.get('secure', False)
-    group_id = args.group or config.get('group')
+    group_id = args.group or config.get('group', '')
     device_name = args.name or config.get('name', None)
     keybind_presets = config.get('keybind_presets', {'default': {}})
-
-    if not group_id:
-        parser.error("Group ID is required (either via --group or settings file)")
 
     loop = asyncio.new_event_loop()
     for signal_type in (signal.SIGINT, signal.SIGTERM):
