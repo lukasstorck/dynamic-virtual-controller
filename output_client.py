@@ -166,10 +166,9 @@ if __name__ == '__main__':
     config = {}
     if args.settings:
         settings_path = pathlib.Path(args.settings)
-        if not settings_path.is_file():
-            raise FileNotFoundError(f"Settings file not found: {args.settings}")
-        with settings_path.open() as file:
-            config = yaml.safe_load(file) or {}
+        if settings_path.is_file():
+            with settings_path.open() as file:
+                config = yaml.safe_load(file) or {}
 
     host = args.host or config.get('host', 'localhost')
     port = args.port or config.get('port', 8000)
