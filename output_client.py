@@ -125,9 +125,14 @@ async def start_output_client(
 
     # reconnect loop
     while not stop_event.is_set():
-        connection_uri = f'{ws_url}?group_id={group_id}'
+        connection_uri = ws_url
+        parameters = []
+        if group_id:
+            parameters.append(f'group_id={urllib.parse.quote_plus(group_id)}')
         if device_name:
-            connection_uri += f'&name={urllib.parse.quote_plus(device_name)}'
+            parameters.append(f'name={urllib.parse.quote_plus(device_name)}')
+        if parameters:
+            connection_uri += '?' + '&'.join(parameters)
 
         success = False
         for family in families_to_try:
