@@ -1,8 +1,9 @@
-host: "localhost"
+host: localhost
 port: 8000
+ip_version: auto
 secure: false
-group: "test"
-name: "TestController"
+group: test
+name: TestController
 keybind_presets:
   default:
     KeyW: BTN_DPAD_UP
