@@ -74,6 +74,49 @@ class OutputDevice:
         }
 
 
+class OutputClient:
+    def __init__(self, id: str, websocket: fastapi.WebSocket):
+        self.websocket = websocket
+        self.devices: dict[str, OutputDevice] = {}
+
+    async def connect_device(
+            self,
+            temporary_id: str,
+            output_device_id: str,
+            group_id: str,
+            device_name: str,
+            allowed_events: set[str],
+            keybind_presets: dict[str, dict[str, str]],
+    ):
+        group = await connection_manager.get_group(group_id)
+        output_device = OutputDevice(
+            id=output_device_id,
+            websocket=self.websocket,
+            name=device_name,
+            group_id=group.id,
+            keybind_presets=keybind_presets,
+            allowed_events=allowed_events,
+        )
+        group.output_devices[output_device.id] = output_device
+        self.devices[output_device.id] = output_device
+        return output_device
+
+    async def remove_all_devices(self):
+        groups: set[Group] = set()
+
+        for device in self.devices.values():
+            group = await connection_manager.get_group(device.group_id)
+            for user in group.users.values():
+                user.selected_output_devices.pop(device.id, None)
+            group.output_devices.pop(device.id, None)
+            print(f'[INFO] Device {device.id} removed from group {group.id}')
+            groups.add(group)
+
+        self.devices.clear()
+        for group in groups:
+            await group.broadcast_to_users(json.dumps(group.serialize_state()))
+
+
 class Group:
     def __init__(self, group_id: str):
         self.id = group_id
@@ -239,7 +282,10 @@ async def ws_user(websocket: fastapi.WebSocket):
 async def ws_output(websocket: fastapi.WebSocket):
     await websocket.accept()
 
-    device_to_group_map: dict[str, str] = {}
+    output_client = OutputClient(
+        id=f'output_{uuid.uuid4().hex[:4]}',
+        websocket=websocket,
+    )
 
     try:
         while True:
@@ -258,29 +304,27 @@ async def ws_output(websocket: fastapi.WebSocket):
                     print(f'Error registering device: {error}')
                     continue
 
-                group = await connection_manager.get_group(group_id)
-                output_device = OutputDevice(output_device_id, websocket, device_name, group.id, keybind_presets, allowed_events)
-                group.output_devices[output_device.id] = output_device
-                device_to_group_map[output_device.id] = group.id
+                output_device = await output_client.connect_device(
+                    temporary_id=temporary_id,
+                    output_device_id=output_device_id,
+                    group_id=group_id,
+                    device_name=device_name,
+                    allowed_events=allowed_events,
+                    keybind_presets=keybind_presets,
+                )
 
                 await output_device.websocket.send_text(json.dumps({
                     'type': 'device_registered',
                     'device_id': output_device.id,
                     'temporary_id': temporary_id,
-                    'group_id': group.id,
+                    'group_id': output_device.group_id,
                 }))
 
+                group = await connection_manager.get_group(output_device.group_id)
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
     except fastapi.WebSocketDisconnect:
-        for output_device_id, group_id in device_to_group_map.items():
-            group = await connection_manager.get_group(group_id)
-            for user in group.users.values():
-                user.selected_output_devices.pop(output_device_id, None)
-
-            group.output_devices.pop(output_device_id, None)
-            print(f'[{group.id}] Output {output_device.id} disconnected.')
-            await group.broadcast_to_users(json.dumps(group.serialize_state()))
+        await output_client.remove_all_devices()
 
 
 if __name__ == '__main__':
