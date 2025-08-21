@@ -9,9 +9,6 @@ import uuid
 
 app = fastapi.FastAPI()
 
-groups: dict[str, 'Group'] = {}
-groups_lock = asyncio.Lock()
-
 
 def is_too_white(hex_color: str, threshold: int = 240):
     '''Return True if the hex color is close to white.'''
@@ -59,11 +56,13 @@ class User:
 
 
 class OutputDevice:
-    def __init__(self, id: str, websocket: fastapi.WebSocket, name: str | None = None):
+    def __init__(self, id: str, websocket: fastapi.WebSocket, name: str, group_id: str, keybind_presets: dict[str, dict[str, str]], allowed_events: set[str]):
         self.id = id
+        self.group_id = group_id
         self.websocket = websocket
         self.name = name or id
-        self.keybind_presets: dict[str, dict[str, str]] = {}
+        self.keybind_presets: dict[str, dict[str, str]] = keybind_presets
+        self.allowed_events: set[str] = allowed_events
 
     def serialize(self, connected_users: list[str]):
         return {
@@ -71,6 +70,7 @@ class OutputDevice:
             'name': self.name,
             'connected_users': connected_users,
             'keybind_presets': self.keybind_presets,
+            'allowed_events': list(self.allowed_events),
         }
 
 
@@ -115,12 +115,19 @@ class Group:
         await self.broadcast(message, list(self.output_devices.values()))
 
 
-async def get_group(group_id: str):
-    async with groups_lock:
-        if group_id not in groups:
-            groups[group_id] = Group(group_id)
-        return groups[group_id]
+class ConnectionManager:
+    def __init__(self):
+        self.groups: dict[str, Group] = {}
+        self.groups_lock = asyncio.Lock()
 
+    async def get_group(self, group_id: str):
+        async with self.groups_lock:
+            if group_id not in self.groups:
+                self.groups[group_id] = Group(group_id)
+            return self.groups[group_id]
+
+
+connection_manager = ConnectionManager()
 
 # === Static Files ===
 static_dir = pathlib.Path(__file__).parent / 'static'
@@ -152,7 +159,7 @@ async def ws_user(websocket: fastapi.WebSocket):
         color=urllib.parse.unquote_plus(query_params.get('color', '')).strip().lower(),
     )
 
-    group = await get_group(group_id)
+    group = await connection_manager.get_group(group_id)
     group.users[user.id] = user
 
     await websocket.send_text(json.dumps({
@@ -195,6 +202,7 @@ async def ws_user(websocket: fastapi.WebSocket):
 
                 await selected_device.websocket.send_text(json.dumps({
                     'type': 'key_event',
+                    'device_id': selected_device.id,
                     'user_id': user.id,
                     'code': incoming_data.get('code'),
                     'state': incoming_data.get('state'),
@@ -216,6 +224,7 @@ async def ws_user(websocket: fastapi.WebSocket):
 
                     await target_ws.send_text(json.dumps({
                         'type': 'rename_output',
+                        'device_id': target_id,
                         'name': new_name,
                     }))
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
@@ -229,42 +238,49 @@ async def ws_user(websocket: fastapi.WebSocket):
 @app.websocket('/ws/output')
 async def ws_output(websocket: fastapi.WebSocket):
     await websocket.accept()
-    query_params = websocket.query_params
-    group_id = query_params.get('group_id') or uuid.uuid4().hex
-    output_device_id = f'output_{uuid.uuid4().hex[:4]}'
-    output_device_name = query_params.get('name') or output_device_id
 
-    group = await get_group(group_id)
-    output_device = OutputDevice(output_device_id, websocket, output_device_name)
-    group.output_devices[output_device_id] = output_device
-
-    await websocket.send_text(json.dumps({
-        'type': 'config',
-        'output_device_id': output_device.id,
-        'output_device_name': urllib.parse.unquote_plus(output_device.name),
-        'group_id': group_id,
-    }))
-
-    await group.broadcast_to_users(json.dumps(group.serialize_state()))
+    device_to_group_map: dict[str, str] = {}
 
     try:
         while True:
             message = await websocket.receive_text()
             incoming_data: dict = json.loads(message)
 
-            if incoming_data.get('type') == 'set_keybind_presets':
-                keybind_presets: dict[str, str] = incoming_data.get('keybind_presets')
-                output_device.keybind_presets = keybind_presets
+            if incoming_data.get('type') == 'register_device':
+                try:
+                    temporary_id = incoming_data.get('temporary_id')
+                    output_device_id = f'output_{uuid.uuid4().hex[:4]}'
+                    group_id = incoming_data.get('group_id') or uuid.uuid4().hex
+                    device_name = incoming_data.get('device_name')
+                    allowed_events = incoming_data.get('allowed_events')
+                    keybind_presets = incoming_data.get('keybind_presets')
+                except Exception as error:
+                    print(f'Error registering device: {error}')
+                    continue
+
+                group = await connection_manager.get_group(group_id)
+                output_device = OutputDevice(output_device_id, websocket, device_name, group.id, keybind_presets, allowed_events)
+                group.output_devices[output_device.id] = output_device
+                device_to_group_map[output_device.id] = group.id
+
+                await output_device.websocket.send_text(json.dumps({
+                    'type': 'device_registered',
+                    'device_id': output_device.id,
+                    'temporary_id': temporary_id,
+                    'group_id': group.id,
+                }))
+
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
     except fastapi.WebSocketDisconnect:
-        for user in group.users.values():
-            if output_device.id in user.selected_output_devices:
-                user.selected_output_devices.pop(output_device.id, None)
+        for output_device_id, group_id in device_to_group_map.items():
+            group = await connection_manager.get_group(group_id)
+            for user in group.users.values():
+                user.selected_output_devices.pop(output_device_id, None)
 
-        group.output_devices.pop(output_device.id, None)
-        await group.broadcast_to_users(json.dumps(group.serialize_state()))
-        print(f'[{group.id}] Output {output_device.id} disconnected.')
+            group.output_devices.pop(output_device_id, None)
+            print(f'[{group.id}] Output {output_device.id} disconnected.')
+            await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
 
 if __name__ == '__main__':

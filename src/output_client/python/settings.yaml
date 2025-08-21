@@ -1,10 +1,46 @@
-host: localhost
-port: 8000
-ip_version: auto
-secure: false
-group: test
-name: TestController
-keybind_presets:
+connection:
+  host: localhost
+  port: 8000
+  ip_version: auto
+  secure: false
+
+devices:
+  Xbox 360 Controller:
+    group_id: test
+    allowed_events:
+      - BTN_DPAD_UP
+      - BTN_DPAD_DOWN
+      - BTN_DPAD_LEFT
+      - BTN_DPAD_RIGHT
+      - BTN_A
+      - BTN_B
+      - BTN_X
+      - BTN_Y
+      - BTN_TL
+      - BTN_TR
+      - BTN_TL2
+      - BTN_TR2
+      - BTN_START
+      - BTN_SELECT
+      - BTN_THUMBL
+      - BTN_THUMBR
+    presets:
+      - default
+      - alt
+    device_type: uinput
+    uinput_name: Microsoft X-Box 360 Controller
+    bustype: 3
+    vendor: 0x045e
+    product: 0x028e
+    version: 1
+  Xbox 360 Controller (2):
+    group_id: test
+    presets:
+      - default
+      - alt
+    device_type: xbox360
+
+keybind_preset_library:
   default:
     KeyW: BTN_DPAD_UP
     KeyA: BTN_DPAD_LEFT
