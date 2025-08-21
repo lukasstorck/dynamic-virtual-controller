@@ -153,7 +153,7 @@ function sendButtonEvent(event, state) {
       (device) => device.id === deviceId
     );
     const buttonCode = currentDevice?.keybindPresets[keybindsName][event.code];
-    if (!buttonCode) return;
+    if (!buttonCode) continue;
 
     websocket.send(
       JSON.stringify({
