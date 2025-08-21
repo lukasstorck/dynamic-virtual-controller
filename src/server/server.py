@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import fastapi
 import fastapi.staticfiles
 import json
@@ -6,8 +7,6 @@ import pathlib
 import time
 import urllib.parse
 import uuid
-
-app = fastapi.FastAPI()
 
 
 def is_too_white(hex_color: str, threshold: int = 240):
@@ -44,6 +43,7 @@ class User:
 
         self.last_activity = time.time()
         self.selected_output_devices: dict[str, bool] = {}
+        self.ping: float | None = None
 
     def serialize(self):
         return {
@@ -51,6 +51,7 @@ class User:
             'name': self.name,
             'color': self.color,
             'last_activity': self.last_activity,
+            'ping': self.ping,
             'selected_output_devices': [device_id for device_id, state in self.selected_output_devices.items() if state],
         }
 
@@ -63,6 +64,7 @@ class OutputDevice:
         self.name = name or id
         self.keybind_presets: dict[str, dict[str, str]] = keybind_presets
         self.allowed_events: set[str] = allowed_events
+        self.ping = None
 
     def serialize(self, connected_users: list[str]):
         return {
@@ -71,11 +73,13 @@ class OutputDevice:
             'connected_users': connected_users,
             'keybind_presets': self.keybind_presets,
             'allowed_events': list(self.allowed_events),
+            'ping': self.ping,
         }
 
 
 class OutputClient:
     def __init__(self, id: str, websocket: fastapi.WebSocket):
+        self.id = id
         self.websocket = websocket
         self.devices: dict[str, OutputDevice] = {}
 
@@ -160,10 +164,14 @@ class Group:
 
 class ConnectionManager:
     connection_manager = None
+    ping_interval = 10  # seconds
 
     def __init__(self):
+        self.users: dict[str, User] = {}
+        self.output_clients: dict[str, OutputClient] = {}
         self.groups: dict[str, Group] = {}
         self.groups_lock = asyncio.Lock()
+        self.pending_pings: dict[str, tuple[str, float]] = {}
 
     @classmethod
     def get(cls):
@@ -177,8 +185,84 @@ class ConnectionManager:
                 self.groups[group_id] = Group(group_id)
             return self.groups[group_id]
 
+    async def ping_monitor(self):
+        while True:
+            await asyncio.sleep(self.ping_interval)
+            for group in self.groups.values():
+                # Ping all users
+                for user_id, user in group.users.items():
+                    try:
+                        ping_id = str(uuid.uuid4())
+                        start_time = time.time()
 
-connection_manager = ConnectionManager()
+                        # Store pending ping
+                        self.pending_pings[user_id] = (ping_id, start_time)
+
+                        await user.websocket.send_text(json.dumps({
+                            'type': 'ping',
+                            'id': ping_id
+                        }))
+                    except Exception:
+                        user.ping = None
+                        self.pending_pings.pop(user_id, None)
+
+                # Ping all output clients
+                for output_client_id, output_client in self.output_clients.items():
+                    try:
+                        ping_id = str(uuid.uuid4())
+                        start_time = time.time()
+
+                        # Store pending ping
+                        self.pending_pings[output_client_id] = (ping_id, start_time)
+
+                        await output_client.websocket.send_text(json.dumps({
+                            'type': 'ping',
+                            'id': ping_id
+                        }))
+                    except Exception:
+                        self.pending_pings.pop(output_client_id, None)
+
+            # Clean up old pending pings
+            cutoff_time = time.time() - 3 * self.ping_interval
+            self.pending_pings = {
+                k: v for k, v in self.pending_pings.items()
+                if v[1] > cutoff_time
+            }
+
+            for group in self.groups.values():
+                await group.broadcast_to_users(json.dumps(group.serialize_state()))
+
+    async def handle_pong(self, sender_id: str, pong_data: dict):
+        'Handle pong response from user or device'
+        ping_id = pong_data.get('id')
+        if not ping_id:
+            return
+
+        pending_ping = self.pending_pings.pop(sender_id, None)
+        if pending_ping:
+            expected_ping_id, start_time = pending_ping
+            if ping_id == expected_ping_id:
+                ping_ms = (time.time() - start_time) * 1000
+
+                # Update ping for user or device
+                if sender_id in self.users:
+                    self.users[sender_id].ping = ping_ms
+                elif sender_id in self.output_clients:
+                    for device in self.output_clients[sender_id].devices.values():
+                        device.ping = ping_ms
+
+
+@contextlib.asynccontextmanager
+async def lifespan(app: fastapi.FastAPI):
+    task = asyncio.create_task(ConnectionManager.get().ping_monitor())
+    try:
+        yield
+    finally:
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+app = fastapi.FastAPI(lifespan=lifespan)
 
 # === Static Files ===
 static_dir = pathlib.Path(__file__).parent / 'static'
@@ -209,6 +293,7 @@ async def ws_user(websocket: fastapi.WebSocket):
         name=urllib.parse.unquote_plus(query_params.get('name', '')).strip(),
         color=urllib.parse.unquote_plus(query_params.get('color', '')).strip().lower(),
     )
+    ConnectionManager.get().users[user.id] = user
 
     group = await ConnectionManager.get().get_group(group_id)
     group.users[user.id] = user
@@ -225,7 +310,6 @@ async def ws_user(websocket: fastapi.WebSocket):
         while True:
             message = await websocket.receive_text()
             incoming_data: dict[str, str] = json.loads(message)
-            user.last_activity = time.time()
 
             if incoming_data.get('type') == 'update_user_data':
                 user.name = incoming_data.get('name')
@@ -233,6 +317,7 @@ async def ws_user(websocket: fastapi.WebSocket):
                 if color != '' and not is_too_white(color):
                     user.color = incoming_data.get('color')
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                user.last_activity = time.time()
 
             elif incoming_data.get('type') == 'select_output':
                 selected_device = incoming_data.get('id')
@@ -243,6 +328,7 @@ async def ws_user(websocket: fastapi.WebSocket):
                     else:
                         user.selected_output_devices.pop(selected_device, None)
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                user.last_activity = time.time()
 
             elif incoming_data.get('type') == 'keypress':
                 device_id = incoming_data.get('device_id')
@@ -258,12 +344,7 @@ async def ws_user(websocket: fastapi.WebSocket):
                     'code': incoming_data.get('code'),
                     'state': incoming_data.get('state'),
                 }))
-
-                await group.broadcast_to_users(json.dumps({
-                    'type': 'activity',
-                    'user_id': user.id,
-                    'timestamp': time.time(),
-                }))
+                user.last_activity = time.time()
 
             elif incoming_data.get('type') == 'rename_output':
                 target_id = incoming_data.get('id')
@@ -280,10 +361,15 @@ async def ws_user(websocket: fastapi.WebSocket):
                         'name': device.name,
                     }))
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                user.last_activity = time.time()
+
+            elif incoming_data.get('type') == 'pong':
+                await ConnectionManager.get().handle_pong(user.id, incoming_data)
 
     except fastapi.WebSocketDisconnect:
         group.users.pop(user.id, None)
         await group.broadcast_to_users(json.dumps(group.serialize_state()))
+        ConnectionManager.get().users.pop(user.id, None)
 
 
 # === Output WebSocket ===
@@ -295,6 +381,7 @@ async def ws_output(websocket: fastapi.WebSocket):
         id=f'output_{uuid.uuid4().hex[:4]}',
         websocket=websocket,
     )
+    ConnectionManager.get().output_clients[output_client.id] = output_client
 
     try:
         while True:
@@ -331,9 +418,12 @@ async def ws_output(websocket: fastapi.WebSocket):
 
                 group = await ConnectionManager.get().get_group(output_device.group_id)
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
+            elif incoming_data.get('type') == 'pong':
+                await ConnectionManager.get().handle_pong(output_client.id, incoming_data)
 
     except fastapi.WebSocketDisconnect:
         await output_client.remove_all_devices()
+        ConnectionManager.get().output_clients.pop(output_client.id)
 
 
 if __name__ == '__main__':

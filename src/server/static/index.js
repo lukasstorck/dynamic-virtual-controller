@@ -82,8 +82,13 @@ function handleWebSocketMessage(event) {
     handleConfigMessage(data);
   } else if (data.type === "group_state") {
     handleGroupStateMessage(data);
-  } else if (data.type === "activity") {
-    handleUserActivityMessage(data);
+  } else if (data.type === "ping") {
+    websocket.send(
+      JSON.stringify({
+        type: "pong",
+        id: data.id,
+      })
+    );
   }
 }
 
@@ -102,6 +107,7 @@ function handleGroupStateMessage(data) {
     name: user.name,
     color: user.color,
     lastActivity: user.last_activity,
+    ping: user.ping,
     selectedOutputDevices: user.selected_output_devices,
   }));
 
@@ -110,19 +116,14 @@ function handleGroupStateMessage(data) {
     name: device.name,
     connectedUsers: device.connected_users || [],
     keybindPresets: device.keybind_presets || {},
+    ping: device.ping,
   }));
 
-  // update selected device id list
   const currentUser = usersList.find((user) => user.id === userId);
-  selectedOutputDeviceIds = currentUser.selectedOutputDevices;
+  selectedOutputDeviceIds = currentUser?.selectedOutputDevices || [];
 
   renderUsers();
   renderOutputDevices();
-}
-
-function handleUserActivityMessage(data) {
-  const user = usersList.find((user) => user.id === data.user_id);
-  if (user) user.lastActivity = data.timestamp;
 }
 
 // === User Data Updates ===
@@ -185,15 +186,38 @@ function formatLastActivity(timestamp) {
   return parts.join(" ") + " ago";
 }
 
+function formatPing(ping) {
+  if (ping == null || isNaN(ping)) return "–";
+  return `${Math.round(ping)} ms`;
+}
+
 function updateLastActivityFields() {
   document
-    .querySelectorAll("#users-table-body td[data-user-id]")
+    .querySelectorAll("#users-table-body td[data-user-id$='-last-activity']")
     .forEach((cell) => {
-      const user = usersList.find((user) => user.id === cell.dataset.userId);
+      const userId = cell.dataset.userId.replace("-last-activity", "");
+      const user = usersList.find((user) => user.id === userId);
       if (!isNaN(user.lastActivity)) {
         cell.textContent = formatLastActivity(user.lastActivity);
       }
     });
+}
+
+function updatePingFields() {
+  // Update user pings
+  document
+    .querySelectorAll("#users-table-body td[data-user-id$='-ping']")
+    .forEach((cell) => {
+      const userId = cell.dataset.userId.replace("-ping", "");
+      const user = usersList.find((u) => u.id === userId);
+      if (user) cell.textContent = formatPing(user.ping);
+    });
+
+  // Update device pings
+  outputDevicesList.forEach((device) => {
+    const el = document.querySelector(`[data-device-id='${device.id}-ping']`);
+    if (el) el.textContent = "Ping: " + formatPing(device.ping);
+  });
 }
 
 function renderUsers() {
@@ -219,8 +243,12 @@ function renderUsers() {
     nameCell.appendChild(nameTag);
 
     const activityCell = document.createElement("td");
-    activityCell.dataset.userId = user.id;
+    activityCell.dataset.userId = user.id + "-last-activity";
     activityCell.textContent = formatLastActivity(user.lastActivity);
+
+    const pingCell = document.createElement("td");
+    pingCell.dataset.userId = user.id + "-ping";
+    pingCell.textContent = formatPing(user.ping);
 
     const devicesCell = document.createElement("td");
     devicesCell.textContent = user.selectedOutputDevices
@@ -230,7 +258,7 @@ function renderUsers() {
       )
       .join(", ");
 
-    row.append(nameCell, activityCell, devicesCell);
+    row.append(nameCell, activityCell, pingCell, devicesCell);
     usersTableBody.appendChild(row);
   });
 }
@@ -359,6 +387,13 @@ function createDeviceCard(device) {
   editButton.appendChild(editIcon);
   keybindsWrapper.append(dropdownLabel, dropdown, editButton);
 
+  // === Ping display ===
+  const pingWrapper = document.createElement("div");
+  pingWrapper.className = "small text-muted mb-2";
+  pingWrapper.dataset.deviceId = device.id + "-ping";
+  pingWrapper.textContent = "Ping: " + formatPing(device.ping);
+
+  // === Connected users ===
   const connectedUsersSection = document.createElement("div");
   const connectedUsersLabel = document.createElement("strong");
   connectedUsersLabel.textContent = "Connected Users:";
@@ -386,7 +421,12 @@ function createDeviceCard(device) {
 
   connectedUsersSection.appendChild(userListContainer);
 
-  body.append(titleWrapper, keybindsWrapper, connectedUsersSection);
+  body.append(
+    titleWrapper,
+    keybindsWrapper,
+    pingWrapper,
+    connectedUsersSection
+  );
   card.appendChild(body);
   column.appendChild(card);
 
@@ -512,4 +552,7 @@ window.addEventListener("DOMContentLoaded", () => {
   colorInput.value = storedColor;
   removeGroupIdFromUrl();
 });
-setInterval(updateLastActivityFields, 1000);
+setInterval(() => {
+  updateLastActivityFields();
+  updatePingFields();
+}, 1000);

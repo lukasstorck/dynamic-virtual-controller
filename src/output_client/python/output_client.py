@@ -305,6 +305,12 @@ class ConnectionManager:
             except ValueError as error:
                 print(f'[WARN] {error}')
 
+        elif msg_type == 'ping':
+            await self.websocket.send(json.dumps({
+                'type': 'pong',
+                'id': data.get('id'),
+            }))
+
     async def connect(self):
         # Reconnect loop
         while not self.stop_event.is_set():
