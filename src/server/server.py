@@ -88,7 +88,7 @@ class OutputClient:
             allowed_events: set[str],
             keybind_presets: dict[str, dict[str, str]],
     ):
-        group = await connection_manager.get_group(group_id)
+        group = await ConnectionManager.get().get_group(group_id)
         output_device = OutputDevice(
             id=output_device_id,
             websocket=self.websocket,
@@ -105,7 +105,7 @@ class OutputClient:
         groups: set[Group] = set()
 
         for device in self.devices.values():
-            group = await connection_manager.get_group(device.group_id)
+            group = await ConnectionManager.get().get_group(device.group_id)
             for user in group.users.values():
                 user.selected_output_devices.pop(device.id, None)
             group.output_devices.pop(device.id, None)
@@ -159,9 +159,17 @@ class Group:
 
 
 class ConnectionManager:
+    connection_manager = None
+
     def __init__(self):
         self.groups: dict[str, Group] = {}
         self.groups_lock = asyncio.Lock()
+
+    @classmethod
+    def get(cls):
+        if cls.connection_manager is None:
+            cls.connection_manager = ConnectionManager()
+        return cls.connection_manager
 
     async def get_group(self, group_id: str):
         async with self.groups_lock:
@@ -202,7 +210,7 @@ async def ws_user(websocket: fastapi.WebSocket):
         color=urllib.parse.unquote_plus(query_params.get('color', '')).strip().lower(),
     )
 
-    group = await connection_manager.get_group(group_id)
+    group = await ConnectionManager.get().get_group(group_id)
     group.users[user.id] = user
 
     await websocket.send_text(json.dumps({
@@ -320,7 +328,7 @@ async def ws_output(websocket: fastapi.WebSocket):
                     'group_id': output_device.group_id,
                 }))
 
-                group = await connection_manager.get_group(output_device.group_id)
+                group = await ConnectionManager.get().get_group(output_device.group_id)
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
     except fastapi.WebSocketDisconnect:
