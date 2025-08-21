@@ -43,7 +43,10 @@ class User:
 
         self.last_activity = time.time()
         self.selected_output_devices: dict[str, bool] = {}
-        self.ping: float | None = None
+        self.pings: list[float] = []
+
+    def get_ping_average(self):
+        return sum(self.pings) / len(self.pings) if self.pings else None
 
     def serialize(self):
         return {
@@ -51,7 +54,7 @@ class User:
             'name': self.name,
             'color': self.color,
             'last_activity': self.last_activity,
-            'ping': self.ping,
+            'ping': self.get_ping_average(),
             'selected_output_devices': [device_id for device_id, state in self.selected_output_devices.items() if state],
         }
 
@@ -64,7 +67,10 @@ class OutputDevice:
         self.name = name or id
         self.keybind_presets: dict[str, dict[str, str]] = keybind_presets
         self.allowed_events: set[str] = allowed_events
-        self.ping = None
+        self.pings: list[float] = []
+
+    def get_ping_average(self):
+        return sum(self.pings) / len(self.pings) if self.pings else None
 
     def serialize(self, connected_users: list[str]):
         return {
@@ -73,7 +79,7 @@ class OutputDevice:
             'connected_users': connected_users,
             'keybind_presets': self.keybind_presets,
             'allowed_events': list(self.allowed_events),
-            'ping': self.ping,
+            'ping': self.get_ping_average(),
         }
 
 
@@ -145,6 +151,16 @@ class Group:
             'output_devices': output_devices_data,
         }
 
+    def serialize_activity_and_ping(self):
+        users = {user.id: [user.last_activity, user.get_ping_average()] for user in self.users.values()}
+        output_devices = {output_device.id: [output_device.get_ping_average()] for output_device in self.output_devices.values()}
+
+        return {
+            'type': 'activity_and_ping',
+            'users': users,
+            'output_devices': output_devices,
+        }
+
     async def broadcast(self, message: str, receivers: list[User | OutputDevice] = None):
         if receivers is None:
             receivers = list(self.users.values()) + list(self.output_devices.values())
@@ -164,7 +180,7 @@ class Group:
 
 class ConnectionManager:
     connection_manager = None
-    ping_interval = 10  # seconds
+    ping_interval = 0.2  # seconds
 
     def __init__(self):
         self.users: dict[str, User] = {}
@@ -186,6 +202,7 @@ class ConnectionManager:
             return self.groups[group_id]
 
     async def ping_monitor(self):
+        i = 0
         while True:
             await asyncio.sleep(self.ping_interval)
             for group in self.groups.values():
@@ -203,7 +220,6 @@ class ConnectionManager:
                             'id': ping_id
                         }))
                     except Exception:
-                        user.ping = None
                         self.pending_pings.pop(user_id, None)
 
                 # Ping all output clients
@@ -229,8 +245,12 @@ class ConnectionManager:
                 if v[1] > cutoff_time
             }
 
+            if i < 10:
+                i += 1
+                continue
+
             for group in self.groups.values():
-                await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                await group.broadcast_to_users(json.dumps(group.serialize_activity_and_ping()))
 
     async def handle_pong(self, sender_id: str, pong_data: dict):
         'Handle pong response from user or device'
@@ -246,10 +266,14 @@ class ConnectionManager:
 
                 # Update ping for user or device
                 if sender_id in self.users:
-                    self.users[sender_id].ping = ping_ms
+                    self.users[sender_id].pings.append(ping_ms)
+                    if len(self.users[sender_id].pings) > 10:
+                        self.users[sender_id].pings = self.users[sender_id].pings[-10:]
                 elif sender_id in self.output_clients:
                     for device in self.output_clients[sender_id].devices.values():
-                        device.ping = ping_ms
+                        device.pings.append(ping_ms)
+                        if len(device.pings) > 10:
+                            device.pings = device.pings[-10:]
 
 
 @contextlib.asynccontextmanager

@@ -82,6 +82,8 @@ function handleWebSocketMessage(event) {
     handleConfigMessage(data);
   } else if (data.type === "group_state") {
     handleGroupStateMessage(data);
+  } else if (data.type === "activity_and_ping") {
+    handleActivityAndPingMessage(data);
   } else if (data.type === "ping") {
     websocket.send(
       JSON.stringify({
@@ -124,6 +126,24 @@ function handleGroupStateMessage(data) {
 
   renderUsers();
   renderOutputDevices();
+}
+
+function handleActivityAndPingMessage(data) {
+  const userUpdates = data.users;
+  const outputDeviceUpdates = data.output_devices;
+
+  usersList.forEach((user) => {
+    const userUpdate = userUpdates[user.id];
+    if (userUpdate) {
+      user.lastActivity = userUpdate[0];
+      user.ping = userUpdate[1];
+    }
+  });
+
+  outputDevicesList.forEach((device) => {
+    const deviceUpdate = outputDeviceUpdates[device.id];
+    if (deviceUpdate) device.ping = deviceUpdate;
+  });
 }
 
 // === User Data Updates ===
