@@ -241,13 +241,13 @@ async def ws_user(websocket: fastapi.WebSocket):
                     if state:
                         user.selected_output_devices[selected_device] = True
                     else:
-                        del user.selected_output_devices[selected_device]
+                        user.selected_output_devices.pop(selected_device, None)
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'keypress':
                 device_id = incoming_data.get('device_id')
                 if device_id not in user.selected_output_devices or device_id not in group.output_devices:
-                    return
+                    continue
 
                 selected_device = group.output_devices[device_id]
 
@@ -269,14 +269,15 @@ async def ws_user(websocket: fastapi.WebSocket):
                 target_id = incoming_data.get('id')
                 new_name = incoming_data.get('name')
                 if target_id in group.output_devices and isinstance(new_name, str):
-                    old_name = group.output_devices[target_id].name
-                    group.output_devices[target_id].name = new_name.strip() or old_name
-                    target_ws = group.output_devices[target_id].websocket
+                    device = group.output_devices[target_id]
+                    if new_name := new_name.strip():
+                        device.name = new_name
+                    target_ws = device.websocket
 
                     await target_ws.send_text(json.dumps({
                         'type': 'rename_output',
                         'device_id': target_id,
-                        'name': new_name,
+                        'name': device.name,
                     }))
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
