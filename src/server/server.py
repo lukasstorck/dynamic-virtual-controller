@@ -91,7 +91,6 @@ class OutputClient:
 
     async def connect_device(
             self,
-            temporary_id: str,
             output_device_id: str,
             group_id: str,
             device_name: str,
@@ -425,7 +424,6 @@ async def ws_output(websocket: fastapi.WebSocket):
                     continue
 
                 output_device = await output_client.connect_device(
-                    temporary_id=temporary_id,
                     output_device_id=output_device_id,
                     group_id=group_id,
                     device_name=device_name,
