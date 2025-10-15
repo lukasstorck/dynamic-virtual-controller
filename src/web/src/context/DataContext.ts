@@ -12,14 +12,32 @@ export interface DataContextType {
   customKeybinds: CustomKeybind[];
   setCustomKeybinds: React.Dispatch<React.SetStateAction<CustomKeybind[]>>;
 
-  groupId: string | null;
-  setGroupId: React.Dispatch<React.SetStateAction<string | null>>;
+  groupId: string;
+  setGroupId: React.Dispatch<React.SetStateAction<string>>;
 
+  userId: string | null; // TODO: check if needed
   setUserId: React.Dispatch<React.SetStateAction<string | null>>;
+
+  userColor: string;
+  setUserColor: React.Dispatch<React.SetStateAction<string>>;
+
+  userName: string;
+  setUserName: React.Dispatch<React.SetStateAction<string>>;
 
   user: User | null;
 
+  websocket: WebSocket | null;
+  setWebsocket: React.Dispatch<React.SetStateAction<WebSocket | null>>;
+
   activeKeybinds: Record<string, Record<string, string>>;
+
+  isConnected: boolean;
+
+  handleJoinGroup: React.Dispatch<void>;
+  handleLeaveGroup: React.Dispatch<void>;
+  handleCopyGroupLink: React.Dispatch<void>;
 }
 
-export const DataContext = createContext<DataContextType | undefined>(undefined);
+export const DataContext = createContext<DataContextType | undefined>(
+  undefined
+);
