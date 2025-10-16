@@ -71,11 +71,8 @@ export default function DataContextProvider({
 
         case "group_state": {
           // update users
-          if (data.users) {
-            setUsers(data.users);
-          }
+          setUsers(data.users || []);
           // update devices
-          if (data.output_devices) {
             setDevices((prevDevices) => {
               const updatedDevices = data.output_devices!.map((device) => {
                 const oldDevice = prevDevices.find((d) => d.id === device.id);
@@ -106,9 +103,8 @@ export default function DataContextProvider({
                 };
               });
 
-              return updatedDevices.sort((a, b) => a.slot - b.slot);
+            return updatedDevices.sort((a, b) => a.slot - b.slot) || [];
             });
-          }
           break;
         }
 
@@ -152,6 +148,8 @@ export default function DataContextProvider({
 
   const handleLeaveGroup = useCallback(() => {
     if (websocket) websocket.close();
+    setUsers([]);
+    setDevices([]);
   }, [websocket]);
 
   const handleJoinGroup = useCallback(() => {
