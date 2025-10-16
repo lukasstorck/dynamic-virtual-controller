@@ -1,10 +1,9 @@
-import { useDataContext } from "./hooks/useDataContext";
 import Sidebar from "./components/Sidebar/Sidebar";
-import { Container, Row, Col } from "react-bootstrap";
+import { Container, Row, Col, Card } from "react-bootstrap";
+import UserTable from "./components/Users/UsersTable";
+import DeviceGrid from "./components/Devices/DeviceGrid";
 
 export default function App() {
-  const { user, isConnected, websocket } = useDataContext();
-
   return (
     <Container fluid className="py-4 bg-light">
       <Row>
@@ -15,15 +14,19 @@ export default function App() {
         <Col md={9}>
           <h1 className="text-center mb-4">Dynamic Virtual Controller</h1>
 
-          <p>
-            <strong>WebSocket:</strong> {websocket?.url ?? "N/A"}
-          </p>
-          <p>
-            <strong>Connected:</strong> {isConnected ? "true" : "false"}
-          </p>
-          <p>
-            <strong>User:</strong> {user?.name ?? "No name found"}
-          </p>
+          {/* Connected Users */}
+          <Card className="p-3 shadow-sm mb-4">
+            <h5>Connected Users</h5>
+            <UserTable />
+          </Card>
+
+          {/* Connected Output Devices */}
+          <Card className="p-3 shadow-sm mb-4">
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h5 className="mb-0">Connected Output Devices</h5>
+            </div>
+            <DeviceGrid />
+          </Card>
         </Col>
       </Row>
     </Container>

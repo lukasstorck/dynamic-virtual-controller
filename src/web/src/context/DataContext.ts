@@ -26,8 +26,7 @@ export interface DataContextType {
 
   user: User | null;
 
-  websocket: WebSocket | null;
-  setWebsocket: React.Dispatch<React.SetStateAction<WebSocket | null>>;
+  websocket: React.Ref<WebSocket | null>;
 
   activeKeybinds: Record<string, Record<string, string>>;
 

@@ -4,6 +4,7 @@ import {
   useEffect,
   type ReactNode,
   useCallback,
+  useRef,
 } from "react";
 
 import { DataContext } from "./DataContext";
@@ -32,25 +33,20 @@ export default function DataContextProvider({
   const [userId, setUserId] = useState<string | null>(null);
   const [userColor, setUserColor] = useState<string>(DEFAULT_COLOR);
   const [userName, setUserName] = useState<string>(DEFAULT_NAME);
-  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
-  const [websocketState, setWebsocketState] = useState<number>(-1);
-
-  const isConnected = useMemo(() => {
-    if (websocketState !== WebSocket.OPEN) return false;
-    return true;
-  }, [websocketState]);
+  const websocket = useRef<WebSocket | null>(null);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
 
   useEffect(() => {
     if (!isConnected) return;
     // update user data
-    websocket?.send(
+    websocket.current?.send(
       JSON.stringify({
         type: "update_user_data",
         name: userName.trim(),
         color: userColor,
       })
     );
-  }, [userName, userColor]);
+  }, [isConnected, userName, userColor]);
 
   const handleCopyGroupLink = useCallback(() => {
     const params = new URLSearchParams({
@@ -62,98 +58,102 @@ export default function DataContextProvider({
 
   const handleWebSocketMessage = useCallback(
     (data: WebSocketMessage) => {
-    switch (data.type) {
-      case "config": {
-        if (data.group_id) setGroupId(data.group_id);
-        if (data.user_id) setUserId(data.user_id);
-        break;
-      }
+      switch (data.type) {
+        case "config": {
+          if (data.group_id) setGroupId(data.group_id);
+          if (data.user_id) setUserId(data.user_id);
+          break;
+        }
 
         case "group_state": {
           // update users
           setUsers(data.users || []);
           // update devices
-            setDevices((prevDevices) => {
-              const updatedDevices = data.output_devices!.map((device) => {
-                const oldDevice = prevDevices.find((d) => d.id === device.id);
-                const oldSelectedPreset = oldDevice?.selected_preset;
-                const isOldSelectedPresetPresent =
-                  oldSelectedPreset &&
-                  oldSelectedPreset in device.keybind_presets;
+          setDevices((prevDevices) => {
+            const updatedDevices = data.output_devices!.map((device) => {
+              const oldDevice = prevDevices.find((d) => d.id === device.id);
+              const oldSelectedPreset = oldDevice?.selected_preset;
+              const isOldSelectedPresetPresent =
+                oldSelectedPreset &&
+                oldSelectedPreset in device.keybind_presets;
 
-                // if a preset was selected and that preset is still present, reselect it
-                // otherwise, chose the first available preset (or null)
-                const selectedPreset = isOldSelectedPresetPresent
-                  ? oldSelectedPreset
-                  : Object.keys(device.keybind_presets)[0] || null;
+              // if a preset was selected and that preset is still present, reselect it
+              // otherwise, chose the first available preset (or null)
+              const selectedPreset = isOldSelectedPresetPresent
+                ? oldSelectedPreset
+                : Object.keys(device.keybind_presets)[0] || null;
 
-                // assemble list of users that are connected to this device
-                // then create a list of user ids or an empty list
-                const connected_user_ids = // TODO: fix case in js object
-                  data.users
-                    ?.filter((user) =>
-                      user.selected_output_devices.includes(device.id)
-                    )
-                    .map((user) => user.id) || [];
+              // assemble list of users that are connected to this device
+              // then create a list of user ids or an empty list
+              const connected_user_ids = // TODO: fix case in js object
+                data.users
+                  ?.filter((user) =>
+                    user.selected_output_devices.includes(device.id)
+                  )
+                  .map((user) => user.id) || [];
 
-                return {
-                  ...device,
-                  selected_preset: selectedPreset, // TODO: fix case in js object
-                  connected_user_ids: connected_user_ids, // TODO: fix case in js object
-                };
-              });
+              return {
+                ...device,
+                selected_preset: selectedPreset, // TODO: fix case in js object
+                connected_user_ids: connected_user_ids, // TODO: fix case in js object
+              };
+            });
 
             return updatedDevices.sort((a, b) => a.slot - b.slot) || [];
-            });
+          });
           break;
         }
 
-      case "activity_and_ping": {
-        // update ping and activity for users
-        setUsers((prevUsers) =>
-          prevUsers.map((user) => {
-            const updatedLastActivity = data.users?.[user.id][0];
-            const updatedPing = data.users?.[user.id][1];
-            return {
-              ...user,
-              lastActivity: updatedLastActivity || user.last_activity,
-              ping: updatedPing || null,
-            };
-          })
-        );
+        case "activity_and_ping": {
+          // update ping and activity for users
+          setUsers((prevUsers) =>
+            prevUsers.map((user) => {
+              const updatedLastActivity = data.users?.[user.id][0];
+              const updatedPing = data.users?.[user.id][1];
+              return {
+                ...user,
+                lastActivity: updatedLastActivity || user.last_activity,
+                ping: updatedPing || null,
+              };
+            })
+          );
 
-        // update ping for devices
-        setDevices((prevDevices) =>
-          prevDevices.map((device) => {
-            const updatedPing = data.output_devices?.[device.id];
-            return { ...device, ping: updatedPing || null };
-          })
-        );
-        break;
-      }
+          // update ping for devices
+          setDevices((prevDevices) =>
+            prevDevices.map((device) => {
+              const updatedPing = data.output_devices?.[device.id];
+              return { ...device, ping: updatedPing || null };
+            })
+          );
+          break;
+        }
 
-      case "ping": {
-        if (isConnected)
-          websocket?.send(JSON.stringify({ type: "pong", id: data.id }));
-        break;
-      }
+        case "ping": {
+          websocket.current?.send(
+            JSON.stringify({ type: "pong", id: data.id })
+          );
+          break;
+        }
 
-      default: {
-        console.warn("Unknown WebSocket message:", data);
-        break;
+        default: {
+          console.warn("Unknown WebSocket message:", data);
+          break;
+        }
       }
-    }
-    return;
-  }, []);
+      return;
+    },
+    [websocket.current]
+  );
 
   const handleLeaveGroup = useCallback(() => {
-    if (websocket) websocket.close();
+    if (websocket.current) websocket.current.close();
+    websocket.current = null;
     setUsers([]);
     setDevices([]);
-  }, [websocket]);
+  }, []);
 
-  const handleJoinGroup = useCallback(() => {
-    if (websocket) websocket.close();
+  const handleJoinGroup = () => {
+    if (websocket.current) websocket.current.close();
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let url = `${protocol}://${window.location.host}/ws/user`;
@@ -169,19 +169,20 @@ export default function DataContextProvider({
       const data: WebSocketMessage = JSON.parse(event.data);
       handleWebSocketMessage(data);
     };
-    console.log(newSocket.readyState);
 
     newSocket.onopen = () => {
-      setWebsocketState(WebSocket.OPEN);
+      setIsConnected(true);
       console.info("WebSocket opened");
     };
     newSocket.onerror = () => console.error("WebSocket error");
     newSocket.onclose = () => {
-      setWebsocketState(WebSocket.CLOSED);
+      setIsConnected(false);
       console.info("WebSocket closed");
+      handleLeaveGroup();
     };
-    setWebsocket(newSocket);
-  }, [groupId, websocket]);
+
+    websocket.current = newSocket;
+  };
 
   const user = useMemo(() => {
     if (!userId) return null;
@@ -259,7 +260,6 @@ export default function DataContextProvider({
         setUserName,
         user,
         websocket,
-        setWebsocket,
         activeKeybinds,
         isConnected,
         handleJoinGroup,
