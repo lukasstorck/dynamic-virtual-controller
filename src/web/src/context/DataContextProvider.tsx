@@ -187,16 +187,16 @@ export default function DataContextProvider({
 
   const user = useMemo(() => {
     if (!userId) return null;
-    return users.find((u) => u.id === userId) || null;
+    return users.find((user) => user.id === userId) || null;
   }, [userId, users]);
 
   const { devicesById, devicesBySlot } = useMemo(() => {
     const byId: Record<string, Device> = {};
     const bySlot: Record<number, Device> = {};
 
-    devices.forEach((d) => {
-      byId[d.id] = d;
-      bySlot[d.slot] = d;
+    devices.forEach((device) => {
+      byId[device.id] = device;
+      bySlot[device.slot] = device;
     });
 
     return { devicesById: byId, devicesBySlot: bySlot };
@@ -215,22 +215,28 @@ export default function DataContextProvider({
       const presetKeybinds = device.keybind_presets[device.selected_preset];
       if (!presetKeybinds) return;
 
-      presetKeybinds.forEach((kb) => {
-        if (kb.key && kb.event) {
-          if (!map[kb.key]) map[kb.key] = {};
-          map[kb.key][device.id] = kb.event;
+      presetKeybinds.forEach((keybind) => {
+        if (keybind.key && keybind.event) {
+          if (!map[keybind.key]) map[keybind.key] = {};
+          map[keybind.key][device.id] = keybind.event;
         }
       });
     });
 
     // Active custom keybinds
-    customKeybinds.forEach((kb) => {
-      if (!kb.active || !kb.key || !kb.event || kb.slot === null) return;
-      const device = devicesBySlot[kb.slot];
+    customKeybinds.forEach((keybind) => {
+      if (
+        !keybind.active ||
+        !keybind.key ||
+        !keybind.event ||
+        keybind.slot === null
+      )
+        return;
+      const device = devicesBySlot[keybind.slot];
       if (!device || !user.selected_output_devices.includes(device.id)) return;
 
-      if (!map[kb.key]) map[kb.key] = {};
-      map[kb.key][device.id] = kb.event;
+      if (!map[keybind.key]) map[keybind.key] = {};
+      map[keybind.key][device.id] = keybind.event;
     });
 
     return map;
