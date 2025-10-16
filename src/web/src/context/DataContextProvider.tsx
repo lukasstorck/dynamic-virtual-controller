@@ -60,7 +60,8 @@ export default function DataContextProvider({
     navigator.clipboard.writeText(link);
   }, [groupId]);
 
-  const handleWebSocketMessage = useCallback((data: WebSocketMessage) => {
+  const handleWebSocketMessage = useCallback(
+    (data: WebSocketMessage) => {
     switch (data.type) {
       case "config": {
         if (data.group_id) setGroupId(data.group_id);
@@ -68,8 +69,7 @@ export default function DataContextProvider({
         break;
       }
 
-      case "group_state":
-        {
+        case "group_state": {
           // update users
           if (data.users) {
             setUsers(data.users);
@@ -109,8 +109,8 @@ export default function DataContextProvider({
               return updatedDevices.sort((a, b) => a.slot - b.slot);
             });
           }
+          break;
         }
-        break;
 
       case "activity_and_ping": {
         // update ping and activity for users
