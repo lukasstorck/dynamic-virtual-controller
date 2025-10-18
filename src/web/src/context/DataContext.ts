@@ -35,6 +35,12 @@ export interface DataContextType {
   handleJoinGroup: React.Dispatch<void>;
   handleLeaveGroup: React.Dispatch<void>;
   handleCopyGroupLink: React.Dispatch<void>;
+  handleRenameOutput: (deviceId: string, newName: string) => void;
+  handleSelectOutput: (deviceId: string, state: boolean) => void;
+
+  usersById: Record<string, User>;
+  devicesById: Record<string, Device>;
+  devicesBySlot: Record<number, Device>;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(

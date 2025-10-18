@@ -8,7 +8,7 @@ export default function DeviceGrid() {
   if (!devices || devices.length === 0) {
     return (
       <div className="text-center text-muted py-3">
-        No output devices connected
+        No output devices available
       </div>
     );
   }

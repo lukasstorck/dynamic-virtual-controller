@@ -184,10 +184,47 @@ export default function DataContextProvider({
     websocket.current = newSocket;
   };
 
+  const handleRenameOutput = (deviceId: string, newName: string) => {
+    if (!isConnected) return;
+    if (!(deviceId in devicesById)) return;
+    if (devicesById[deviceId].name === newName) return;
+    if (newName.trim() === "") return;
+
+    websocket.current?.send(
+      JSON.stringify({
+        type: "rename_output",
+        id: deviceId,
+        name: newName,
+      })
+    );
+  };
+
+  const handleSelectOutput = (deviceId: string, state: boolean) => {
+    if (!isConnected) return;
+    if (user?.selected_output_devices.includes(deviceId) === state) return;
+
+    websocket.current?.send(
+      JSON.stringify({
+        type: "select_output",
+        id: deviceId,
+        state: state,
+      })
+    );
+  };
+
   const user = useMemo(() => {
     if (!userId) return null;
     return users.find((user) => user.id === userId) || null;
   }, [userId, users]);
+
+  const usersById = useMemo(() => {
+    const byId: Record<string, User> = {};
+
+    users.forEach((user) => {
+      byId[user.id] = user;
+    });
+    return byId;
+  }, [users]);
 
   const { devicesById, devicesBySlot } = useMemo(() => {
     const byId: Record<string, Device> = {};
@@ -214,12 +251,13 @@ export default function DataContextProvider({
       const presetKeybinds = device.keybind_presets[device.selected_preset];
       if (!presetKeybinds) return;
 
-      presetKeybinds.forEach((keybind) => {
-        if (keybind.key && keybind.event) {
-          if (!map[keybind.key]) map[keybind.key] = {};
-          map[keybind.key][device.id] = keybind.event;
-        }
-      });
+      // console.log(presetKeybinds);                           // TODO fix
+      // Object.keys(presetKeybinds).forEach((keybind) => {
+      //   if (keybind.key && keybind.event) {
+      //     if (!map[keybind.key]) map[keybind.key] = {};
+      //     map[keybind.key][device.id] = keybind.event;
+      //   }
+      // });
     });
 
     // Active custom keybinds
@@ -265,6 +303,11 @@ export default function DataContextProvider({
         handleJoinGroup,
         handleLeaveGroup,
         handleCopyGroupLink,
+        handleRenameOutput,
+        handleSelectOutput,
+        usersById,
+        devicesById,
+        devicesBySlot,
       }}
     >
       {children}
