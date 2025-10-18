@@ -16,7 +16,12 @@ export default function GroupControls() {
   return (
     <>
       {!isConnected ? (
-        <Form>
+        <Form
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleJoinGroup();
+          }}
+        >
           <Form.Group className="mb-3" controlId="groupId">
             <Form.Label>Group ID</Form.Label>
             <Form.Control
