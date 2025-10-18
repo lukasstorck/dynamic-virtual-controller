@@ -1,42 +1,45 @@
-import { useEffect, useState, type FC } from "react";
+import { useMemo, type FC } from "react";
 import { type User } from "../../types";
 import { formatLastActivity, formatPing } from "../../utils/formatting";
+import { useDataContext } from "../../hooks/useDataContext";
 
 interface Props {
   user: User;
 }
 
 const UserRow: FC<Props> = ({ user }) => {
-  const [, setTick] = useState(0);
+  const { devices, userId } = useDataContext();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setTick((prev) => prev + 1);
-    }, 1000);
+  const connectedOutputDevicesString = useMemo(() => {
+    const selectedDevices = devices.filter((device) =>
+      user.selected_output_devices.includes(device.id)
+    );
+    const deviceNames = selectedDevices.map((device) => device.name).join(", ");
+    return deviceNames;
+  }, [user.selected_output_devices]);
 
-    return () => clearInterval(interval);
-  }, []);
+  const userNameString = useMemo(() => {
+    let userName = user.name;
+
+    if (user.id === userId) userName += " (You)";
+    return userName;
+  }, [user.id, user.name]);
 
   return (
     <tr>
       <td>
         <span
-          className="d-inline-block rounded-circle me-2"
+          className="d-inline-block px-2 py-1 rounded m-1 small"
           style={{
             backgroundColor: user.color,
-            width: 12,
-            height: 12,
           }}
-        />
-        {user.name}
+        >
+          {userNameString}
+        </span>
       </td>
       <td>{formatLastActivity(user.last_activity)}</td>
       <td>{formatPing(user.ping)}</td>
-      <td>
-        {user.selected_output_devices?.length
-          ? user.selected_output_devices.join(", ")
-          : "None"}
-      </td>
+      <td>{connectedOutputDevicesString}</td>
     </tr>
   );
 };
