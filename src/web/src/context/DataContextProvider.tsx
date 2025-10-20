@@ -273,6 +273,8 @@ export default function DataContextProvider({
     // Preset keybinds
     user.selected_output_devices.forEach((deviceId) => {
       const device = devicesById[deviceId];
+      // TODO: get selected preset from slotPreset variable slotPreset[device.slot]
+      // TODO: when devices are loaded or updated, ensure that the stored preset name in slotPreset is present for that slot
       if (!device || !device.selected_preset) return;
 
       const presetKeybinds = device.keybind_presets[device.selected_preset];
