@@ -11,15 +11,13 @@ export default function GroupControls() {
     handleCopyGroupLink,
   } = useDataContext();
 
-  // TODO: load group id from url parameter and automatically try to join that id
-
   return (
     <>
       {!isConnected ? (
         <Form
           onSubmit={(event) => {
             event.preventDefault();
-            handleJoinGroup();
+            handleJoinGroup(groupId);
           }}
         >
           <Form.Group className="mb-3" controlId="groupId">
@@ -34,7 +32,7 @@ export default function GroupControls() {
           <Button
             variant="primary"
             className="w-100"
-            onClick={() => handleJoinGroup()}
+            onClick={() => handleJoinGroup(groupId)}
           >
             Join Group
           </Button>

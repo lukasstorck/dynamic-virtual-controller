@@ -48,6 +48,21 @@ export default function DataContextProvider({
     );
   }, [isConnected, userName, userColor]);
 
+  useEffect(() => {
+    // read group id from url paramters
+    // remove from url and auto join that group
+    const url = new URL(window.location.href);
+    const urlGroupId = url.searchParams.get("group_id");
+    if (!urlGroupId) return;
+
+    setGroupId(urlGroupId.trim());
+
+    const newUrl = `${url.origin}${url.pathname}`;
+    window.history.replaceState({}, document.title, newUrl);
+
+    handleJoinGroup(urlGroupId.trim());
+  }, []);
+
   const handleCopyGroupLink = useCallback(() => {
     const params = new URLSearchParams({
       group_id: groupId,
@@ -152,7 +167,7 @@ export default function DataContextProvider({
     setDevices([]);
   }, []);
 
-  const handleJoinGroup = () => {
+  const handleJoinGroup = (groupId: string) => {
     if (websocket.current) websocket.current.close();
 
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
