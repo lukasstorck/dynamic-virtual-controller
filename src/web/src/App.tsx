@@ -2,8 +2,28 @@ import Sidebar from "./components/Sidebar/Sidebar";
 import { Container, Row, Col, Card } from "react-bootstrap";
 import UserTable from "./components/Users/UsersTable";
 import DeviceGrid from "./components/Devices/DeviceGrid";
+import { useDataContext } from "./hooks/useDataContext";
+import { useEffect } from "react";
 
 export default function App() {
+  const { handleKeyPress } = useDataContext();
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      handleKeyPress(event, 1);
+    };
+    const handleKeyUp = (event: KeyboardEvent) => {
+      handleKeyPress(event, 0);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [handleKeyPress]);
+
   return (
     <Container fluid className="py-4 bg-light">
       <Row>

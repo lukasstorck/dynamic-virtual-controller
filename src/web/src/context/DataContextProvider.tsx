@@ -266,12 +266,20 @@ export default function DataContextProvider({
       const presetKeybinds = device.keybind_presets[device.selected_preset];
       if (!presetKeybinds) return;
 
-      // console.log(presetKeybinds);                           // TODO fix
-      // Object.keys(presetKeybinds).forEach((keybind) => {
-      //   if (keybind.key && keybind.event) {
-      //     if (!map[keybind.key]) map[keybind.key] = {};
-      //     map[keybind.key][device.id] = keybind.event;
-      //   }
+      Object.entries(presetKeybinds).forEach((keybind) => {
+        const [key, event] = keybind;
+
+        if (!key || !event) return;
+        if (!map[key]) map[key] = {};
+        const eventf: any = event; // TODO fix
+        map[key][device.id] = eventf;
+      });
+
+      // TODO use keybind object, not loose variables as above
+      // presetKeybinds.map((keybind) => {
+      //   if (!keybind.key || !keybind.event) return;
+      //   if (!map[keybind.key]) map[keybind.key] = {};
+      //   map[keybind.key][device.id] = keybind.event;
       // });
     });
 
@@ -293,6 +301,35 @@ export default function DataContextProvider({
 
     return map;
   }, [user, devicesById, devicesBySlot, customKeybinds]);
+
+  const handleKeyPress = useCallback(
+    (event: KeyboardEvent, state: number) => {
+      // only capture and send keys when connected
+      if (!isConnected) return;
+
+      // do not capture key events when editing device name
+      // TODO: also deny on active modal
+      const clickedDOMTagName = (
+        event.target as HTMLElement
+      ).tagName.toLowerCase();
+      if (["button", "input"].includes(clickedDOMTagName)) return;
+
+      const keyMappings = activeKeybinds[event.code];
+      if (!keyMappings) return;
+
+      Object.entries(keyMappings).forEach(([deviceId, buttonCode]) => {
+        websocket.current?.send(
+          JSON.stringify({
+            type: "keypress",
+            device_id: deviceId,
+            code: buttonCode,
+            state: state,
+          })
+        );
+      });
+    },
+    [isConnected, activeKeybinds]
+  );
 
   return (
     <DataContext
@@ -320,6 +357,7 @@ export default function DataContextProvider({
         handleCopyGroupLink,
         handleRenameOutput,
         handleSelectOutput,
+        handleKeyPress,
         usersById,
         devicesById,
         devicesBySlot,
