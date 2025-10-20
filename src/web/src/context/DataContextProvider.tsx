@@ -8,8 +8,8 @@ import {
 } from "react";
 
 import { DataContext } from "./DataContext";
-import type { User, Device, CustomKeybind } from "../types";
-import { DEFAULT_COLOR, DEFAULT_NAME } from "../hooks/useLocalStorage";
+import type { User, Device } from "../types";
+import { useLocalStorageUserData } from "../hooks/useLocalStorage";
 
 type WebSocketMessage =
   | { type: "config"; user_id: string; group_id: string }
@@ -28,13 +28,23 @@ export default function DataContextProvider({
 }) {
   const [users, setUsers] = useState<User[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [customKeybinds, setCustomKeybinds] = useState<CustomKeybind[]>([]);
   const [groupId, setGroupId] = useState<string>("");
   const [userId, setUserId] = useState<string | null>(null);
-  const [userColor, setUserColor] = useState<string>(DEFAULT_COLOR);
-  const [userName, setUserName] = useState<string>(DEFAULT_NAME);
   const websocket = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+
+  // load user name, color, slot presets and
+  // custom keybinds from local storage
+  const {
+    userName,
+    setUserName,
+    userColor,
+    setUserColor,
+    slotPresets,
+    setSlotPresets,
+    customKeybinds,
+    setCustomKeybinds,
+  } = useLocalStorageUserData();
 
   useEffect(() => {
     if (!isConnected) return;
@@ -47,8 +57,6 @@ export default function DataContextProvider({
       })
     );
   }, [isConnected, userName, userColor]);
-
-  // TODO: load color and name from local storage
 
   // TODO: add keybind editor modal and behavior
 

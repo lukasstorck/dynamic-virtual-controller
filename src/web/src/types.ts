@@ -27,3 +27,7 @@ export interface CustomKeybind extends Keybind {
   slot: number | null;
   active: boolean;
 }
+
+export interface SlotPresets {
+  [slot: number]: string;
+}
