@@ -49,6 +49,8 @@ export default function App() {
           </Card>
         </Col>
       </Row>
+
+      {/* TODO: add keybind editor modal */}
     </Container>
   );
 }

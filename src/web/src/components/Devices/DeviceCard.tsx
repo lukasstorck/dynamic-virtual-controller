@@ -86,6 +86,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
           <select className="form-select form-select-sm flex-grow-1 mb-0">
             {Object.keys(device.keybind_presets).map((presetName) => (
               // TODO: add "None" option
+              // TODO: add selection behavior
               <option key={presetName} value={presetName}>
                 {presetName}
               </option>

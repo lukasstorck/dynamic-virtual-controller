@@ -48,6 +48,10 @@ export default function DataContextProvider({
     );
   }, [isConnected, userName, userColor]);
 
+  // TODO: load color and name from local storage
+
+  // TODO: add keybind editor modal and behavior
+
   useEffect(() => {
     // read group id from url paramters
     // remove from url and auto join that group

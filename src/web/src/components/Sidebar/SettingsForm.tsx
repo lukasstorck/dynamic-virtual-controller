@@ -2,6 +2,7 @@ import { Form, Button } from "react-bootstrap";
 import { useDataContext } from "../../hooks/useDataContext";
 
 export default function SettingsForm() {
+  // TODO: rename component
   const { userName, setUserName, userColor, setUserColor } = useDataContext();
 
   return (
@@ -30,11 +31,11 @@ export default function SettingsForm() {
       <Button
         variant="outline-primary"
         className="w-100"
-        onClick={() => alert("TODO")}   // TODO open keybind editor
+        onClick={() => alert("TODO")} // TODO open keybind editor
       >
         <span
           className="material-symbols-outlined me-1"
-          style={{ fontSize: "16px", verticalAlign: "text-bottom" }}    // TODO align icon
+          style={{ fontSize: "16px", verticalAlign: "text-bottom" }} // TODO align icon
         >
           edit
         </span>
