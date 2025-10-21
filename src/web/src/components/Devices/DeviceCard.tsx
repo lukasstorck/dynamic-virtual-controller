@@ -70,7 +70,9 @@ const DeviceCard: FC<Props> = ({ device }) => {
               "d-inline-flex align-items-center justify-content-center btn-sm flex-shrink-0 px-2 py-0" +
               (!deviceNameModified ? " invisible" : "")
             }
-            onClick={() => {
+            onClick={(event) => {
+              event.stopPropagation();
+              setModifiedDeviceName(modifiedDeviceName.trim());
               handleRenameOutput(device.id, modifiedDeviceName);
             }}
           >

@@ -221,7 +221,7 @@ export default function DataContextProvider({
       JSON.stringify({
         type: "rename_output",
         id: deviceId,
-        name: newName,
+        name: newName.trim(),
       })
     );
   };
