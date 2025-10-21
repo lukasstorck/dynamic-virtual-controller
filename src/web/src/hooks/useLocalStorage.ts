@@ -59,7 +59,6 @@ export function useLocalStorageUserData() {
 
   // save values to local storage on change
   useEffect(() => {
-    console.log("save user name:", userName);
     saveUserPreferences(userName, userColor);
   }, [userName, userColor]);
 

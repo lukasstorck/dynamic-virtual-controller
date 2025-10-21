@@ -71,7 +71,6 @@ const DeviceCard: FC<Props> = ({ device }) => {
               (!deviceNameModified ? " invisible" : "")
             }
             onClick={() => {
-              console.log(device.id, modifiedDeviceName);
               handleRenameOutput(device.id, modifiedDeviceName);
             }}
           >
