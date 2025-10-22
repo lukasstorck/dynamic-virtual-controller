@@ -1,6 +1,6 @@
 import { createContext } from "react";
 
-import type { User, Device, CustomKeybind } from "../types";
+import type { User, Device, CustomKeybind, SlotPresets } from "../types";
 
 export interface DataContextType {
   users: User[];
@@ -24,6 +24,9 @@ export interface DataContextType {
   userName: string;
   setUserName: React.Dispatch<React.SetStateAction<string>>;
 
+  slotPresets: SlotPresets;
+  setSlotPresets: (newSlotPresets: SlotPresets) => void;
+
   user: User | null;
 
   websocket: React.Ref<WebSocket | null>;
@@ -38,6 +41,7 @@ export interface DataContextType {
   handleRenameOutput: (deviceId: string, newName: string) => void;
   handleSelectOutput: (deviceId: string, state: boolean) => void;
   handleKeyPress: (event: KeyboardEvent, state: number) => void;
+  handleSelectKeybindPreset: (deviceSlot: number, presetName: string) => void;
 
   usersById: Record<string, User>;
   devicesById: Record<string, Device>;

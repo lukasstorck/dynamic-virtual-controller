@@ -9,8 +9,15 @@ interface Props {
 }
 
 const DeviceCard: FC<Props> = ({ device }) => {
-  const { handleRenameOutput, user, usersById, userId, handleSelectOutput } =
-    useDataContext();
+  const {
+    handleRenameOutput,
+    user,
+    usersById,
+    userId,
+    handleSelectOutput,
+    slotPresets,
+    handleSelectKeybindPreset,
+  } = useDataContext();
   const [modifiedDeviceName, setModifiedDeviceName] = useState(device.name);
   const deviceNameModified = useMemo(() => {
     return device.name !== modifiedDeviceName;
@@ -36,6 +43,10 @@ const DeviceCard: FC<Props> = ({ device }) => {
     () => user?.selected_output_devices.includes(device.id),
     [user?.selected_output_devices]
   );
+
+  const keybindPresetOptions = useMemo(() => {
+    return ["None"].concat(Object.keys(device.keybind_presets));
+  }, [device]);
 
   return (
     <Card
@@ -84,10 +95,15 @@ const DeviceCard: FC<Props> = ({ device }) => {
 
         <div className="d-flex align-items-center gap-2 mb-2">
           <label className="form-label mb-0 small text-nowrap">Keybinds:</label>
-          <select className="form-select form-select-sm flex-grow-1 mb-0">
-            {Object.keys(device.keybind_presets).map((presetName) => (
-              // TODO: add "None" option
-              // TODO: add selection behavior
+          <select
+            className="form-select form-select-sm flex-grow-1 mb-0"
+            value={slotPresets[device.slot]}
+            onChange={(event) => {
+              event.target.blur();
+              handleSelectKeybindPreset(device.slot, event.target.value);
+            }}
+          >
+            {keybindPresetOptions.map((presetName) => (
               <option key={presetName} value={presetName}>
                 {presetName}
               </option>

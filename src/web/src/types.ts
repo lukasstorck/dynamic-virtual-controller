@@ -16,7 +16,6 @@ export interface Device {
   id: string;
   name: string;
   slot: number;
-  selected_preset: string | null;
   keybind_presets: Record<string, Keybind[]>;
   allowed_events: string[];
   ping: number | null; // TODO: rename to last_ping_time

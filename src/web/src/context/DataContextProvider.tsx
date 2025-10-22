@@ -96,19 +96,25 @@ export default function DataContextProvider({
           // update users
           setUsers(data.users || []);
           // update devices
-          setDevices((prevDevices) => {
+          setDevices((prevDevices) => { // TODO: clean up structure, no callback needed to set device (old variable not needed)
             const updatedDevices = data.output_devices!.map((device) => {
-              const oldDevice = prevDevices.find((d) => d.id === device.id);
-              const oldSelectedPreset = oldDevice?.selected_preset;
-              const isOldSelectedPresetPresent =
-                oldSelectedPreset &&
-                oldSelectedPreset in device.keybind_presets;
+              if (device.slot in slotPresets) {
+                if (slotPresets[device.slot] !== "None" && !(slotPresets[device.slot] in device.keybind_presets)) {
+                  // stored preset name is not available in device presets -> reset
+                  delete slotPresets[device.slot];
+                }
+              }
 
-              // if a preset was selected and that preset is still present, reselect it
-              // otherwise, chose the first available preset (or null)
-              const selectedPreset = isOldSelectedPresetPresent
-                ? oldSelectedPreset
-                : Object.keys(device.keybind_presets)[0] || null;
+              // when no slot preset is stored (or recently reset)
+              // -> set to "default", the first keybind preset or "None"
+              if (!(device.slot in slotPresets)) {
+                if ("default" in device.keybind_presets) {
+                  slotPresets[device.slot] = "default";   // TODO: check if this direct manipulation is ok (also see delete above and setter below)
+                } else {
+                  slotPresets[device.slot] =
+                    Object.keys(device.keybind_presets)[0] || "None";
+                }
+              }
 
               // assemble list of users that are connected to this device
               // then create a list of user ids or an empty list
@@ -121,7 +127,6 @@ export default function DataContextProvider({
 
               return {
                 ...device,
-                selected_preset: selectedPreset, // TODO: fix case in js object
                 connected_user_ids: connected_user_ids, // TODO: fix case in js object
               };
             });
@@ -226,6 +231,33 @@ export default function DataContextProvider({
     );
   };
 
+  const handleSelectKeybindPreset = (
+    deviceSlot: number,
+    presetName: string
+  ) => {
+    if (!(deviceSlot in devicesBySlot)) return;
+    if (
+      !(
+        presetName === "None" ||
+        presetName in devicesBySlot[deviceSlot].keybind_presets
+      )
+    )
+      return;
+
+    setSlotPresets((prevSlotPresets) => {
+      console.log("set slot preset", deviceSlot, presetName);
+      const newSlotPresets = {
+        ...prevSlotPresets,
+      };
+      newSlotPresets[deviceSlot] = presetName;
+      return newSlotPresets;
+    });
+
+    // slotPresets[deviceSlot] = presetName; // TODO: do not overwrite the whole object, but also give signal to local storage update (missing here)
+  };
+
+  useEffect(() => console.log(slotPresets), [slotPresets]);
+
   const handleSelectOutput = (deviceId: string, state: boolean) => {
     if (!isConnected) return;
     if (user?.selected_output_devices.includes(deviceId) === state) return;
@@ -275,12 +307,24 @@ export default function DataContextProvider({
       const device = devicesById[deviceId];
       // TODO: get selected preset from slotPreset variable slotPreset[device.slot]
       // TODO: when devices are loaded or updated, ensure that the stored preset name in slotPreset is present for that slot
-      if (!device || !device.selected_preset) return;
 
-      const presetKeybinds = device.keybind_presets[device.selected_preset];
-      if (!presetKeybinds) return;
+      // skip keybind if device is not present
+      if (!device) return;
 
-      Object.entries(presetKeybinds).forEach((keybind) => {
+      // skip keybind if device slot has no preset stored
+      if (!(device.slot in slotPresets)) return;
+
+      const selectedPresetName = slotPresets[device.slot];
+      // skip keybind if selected preset name is undefined or null or "None"
+      if (!selectedPresetName || selectedPresetName === "None") return;
+      // skip keybind if device does not have a preset with the selected preset name
+      if (!(selectedPresetName in device.keybind_presets)) return;
+
+      const selectedKeybinds = device.keybind_presets[selectedPresetName];
+      // skip keybind if keybinds of selected preset are undefined or null
+      if (!selectedKeybinds) return;
+
+      Object.entries(selectedKeybinds).forEach((keybind) => {
         const [key, event] = keybind;
 
         if (!key || !event) return;
@@ -362,6 +406,9 @@ export default function DataContextProvider({
         setUserColor,
         userName,
         setUserName,
+        slotPresets,
+        setSlotPresets,
+        handleSelectKeybindPreset,
         user,
         websocket,
         activeKeybinds,
