@@ -17,6 +17,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
     handleSelectOutput,
     slotPresets,
     handleSelectKeybindPreset,
+    userColor,
   } = useDataContext();
   const [modifiedDeviceName, setModifiedDeviceName] = useState(device.name);
   const deviceNameModified = useMemo(() => {
@@ -55,7 +56,10 @@ const DeviceCard: FC<Props> = ({ device }) => {
         (userIsConnectedToDevice ? " border-3" : "")
       }
       onClick={(event) => toggleUserConnectionToDevice(event, device.id)}
-      style={{ cursor: "pointer" }}
+      style={{
+        cursor: "pointer",
+        ...(userIsConnectedToDevice && { "border-color": userColor }),
+      }}
     >
       {/* Slot Badge */}
       <Badge pill className="position-absolute top-0 end-0 translate-middle">
