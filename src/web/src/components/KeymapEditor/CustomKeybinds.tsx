@@ -27,13 +27,13 @@ export default function CustomKeybinds() {
       {/* Table */}
       <Table striped hover responsive>
         <thead className="table-light">
+          {/* TODO: add width */}
           <tr>
-            {/* TODO: add width */}
-            <th>Key</th> {/* width="150" */}    
-            <th>Device</th> {/* width="120" */}
-            <th>Target Event</th> {/* width="180" */}
-            <th>Active</th> {/* width="80" */}
-            <th>Actions</th> {/* width="80" */}
+            <th>Key</th>
+            <th>Device</th>
+            <th>Target Event</th>
+            <th>Active</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
