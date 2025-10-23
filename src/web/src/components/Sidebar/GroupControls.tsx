@@ -41,6 +41,7 @@ export default function GroupControls() {
         <Stack gap={2}>
           <div>
             <small className="text-muted">Group ID:</small>
+            {/* TODO: hide group id with "**** (hidden)" and show on click, add tooltip to show */}
             <div className="fw-bold text-break">{groupId}</div>
           </div>
 
