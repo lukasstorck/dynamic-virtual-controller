@@ -27,14 +27,13 @@ export default function App() {
 
   return (
     <Container fluid className="py-4 bg-light">
+      <h1 className="text-center mb-4">Dynamic Virtual Controller</h1>
       <Row>
         <Col md={3}>
           <Sidebar />
         </Col>
 
         <Col md={9}>
-          <h1 className="text-center mb-4">Dynamic Virtual Controller</h1>
-
           {/* Connected Users */}
           <Card className="p-3 shadow-sm mb-4">
             <h5>Connected Users</h5>
