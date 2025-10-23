@@ -36,12 +36,12 @@ export default function SettingsForm() {
 
       <Button
         variant="outline-primary"
-        className="w-100"
+        className="w-100 d-flex justify-content-center align-items-center"
         onClick={() => setShowKeybindEditor(true)}
       >
         <span
-          className="material-symbols-outlined me-1"
-          style={{ fontSize: "16px", verticalAlign: "text-bottom" }} // TODO align icon
+          className="material-symbols-outlined me-1 fs-5"
+          style={{ fontSize: "16px" }}
         >
           edit
         </span>
