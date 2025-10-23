@@ -3,7 +3,13 @@ import { useDataContext } from "../../hooks/useDataContext";
 
 export default function SettingsForm() {
   // TODO: rename component
-  const { userName, setUserName, userColor, setUserColor } = useDataContext();
+  const {
+    userName,
+    setUserName,
+    userColor,
+    setUserColor,
+    setShowKeybindEditor,
+  } = useDataContext();
 
   return (
     <Form>
@@ -31,7 +37,7 @@ export default function SettingsForm() {
       <Button
         variant="outline-primary"
         className="w-100"
-        onClick={() => alert("TODO")} // TODO open keybind editor
+        onClick={() => setShowKeybindEditor(true)}
       >
         <span
           className="material-symbols-outlined me-1"

@@ -46,6 +46,8 @@ export interface DataContextType {
   usersById: Record<string, User>;
   devicesById: Record<string, Device>;
   devicesBySlot: Record<number, Device>;
+  showKeybindEditor: boolean;
+  setShowKeybindEditor: (newState: boolean) => void;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(

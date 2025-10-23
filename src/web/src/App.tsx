@@ -4,6 +4,7 @@ import UserTable from "./components/Users/UsersTable";
 import DeviceGrid from "./components/Devices/DeviceGrid";
 import { useDataContext } from "./hooks/useDataContext";
 import { useEffect } from "react";
+import KeybindEditor from "./components/KeymapEditor/KeybindEditor";
 
 export default function App() {
   const { handleKeyPress } = useDataContext();
@@ -50,7 +51,7 @@ export default function App() {
         </Col>
       </Row>
 
-      {/* TODO: add keybind editor modal */}
+      <KeybindEditor />
     </Container>
   );
 }

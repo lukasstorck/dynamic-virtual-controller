@@ -31,7 +31,8 @@ export default function DataContextProvider({
   const [groupId, setGroupId] = useState<string>("");
   const [userId, setUserId] = useState<string | null>(null);
   const websocket = useRef<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [showKeybindEditor, setShowKeybindEditor] = useState(false);
 
   // load user name, color, slot presets and
   // custom keybinds from local storage
@@ -96,10 +97,14 @@ export default function DataContextProvider({
           // update users
           setUsers(data.users || []);
           // update devices
-          setDevices((prevDevices) => { // TODO: clean up structure, no callback needed to set device (old variable not needed)
+          setDevices((prevDevices) => {
+            // TODO: clean up structure, no callback needed to set device (old variable not needed)
             const updatedDevices = data.output_devices!.map((device) => {
               if (device.slot in slotPresets) {
-                if (slotPresets[device.slot] !== "None" && !(slotPresets[device.slot] in device.keybind_presets)) {
+                if (
+                  slotPresets[device.slot] !== "None" &&
+                  !(slotPresets[device.slot] in device.keybind_presets)
+                ) {
                   // stored preset name is not available in device presets -> reset
                   delete slotPresets[device.slot];
                 }
@@ -109,7 +114,7 @@ export default function DataContextProvider({
               // -> set to "default", the first keybind preset or "None"
               if (!(device.slot in slotPresets)) {
                 if ("default" in device.keybind_presets) {
-                  slotPresets[device.slot] = "default";   // TODO: check if this direct manipulation is ok (also see delete above and setter below)
+                  slotPresets[device.slot] = "default"; // TODO: check if this direct manipulation is ok (also see delete above and setter below)
                 } else {
                   slotPresets[device.slot] =
                     Object.keys(device.keybind_presets)[0] || "None";
@@ -422,6 +427,8 @@ export default function DataContextProvider({
         usersById,
         devicesById,
         devicesBySlot,
+        showKeybindEditor,
+        setShowKeybindEditor,
       }}
     >
       {children}
