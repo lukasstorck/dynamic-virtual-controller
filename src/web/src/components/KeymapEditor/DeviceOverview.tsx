@@ -3,6 +3,13 @@ import { useDataContext } from "../../hooks/useDataContext";
 
 export default function DeviceOverview() {
   const { devices } = useDataContext();
+  
+  // TODO
+  // the device overview should display keybinds contained in the preset keybinds for a device
+  // also allow selecting the preset
+  // maybe a header row for each device with slot, device name, device type, selected preset name (mb as dropdown)
+  // then all preset entries as a collapsable with columns: key -> target event
+
   return (
     <div className="mb-4">
       <h6 className="fw-bold mb-3">Device Configuration</h6>

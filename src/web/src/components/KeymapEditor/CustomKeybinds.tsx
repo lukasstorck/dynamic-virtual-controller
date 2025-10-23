@@ -25,6 +25,11 @@ export default function CustomKeybinds() {
       </Row>
 
       {/* Table */}
+      {/* TODO: 
+          - split the table rows for the keybinds into a subcomponent
+          - remove the actions column header, just place buttons with trash bin in last (empty) column
+          - add input detection for key selection
+          - change device column to slot with device name in brackets */}
       <Table striped hover responsive>
         <thead className="table-light">
           {/* TODO: add width */}
