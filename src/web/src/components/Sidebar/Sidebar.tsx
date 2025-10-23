@@ -1,5 +1,5 @@
 import { Card, Stack } from "react-bootstrap";
-import SettingsForm from "./SettingsForm";
+import SettingsForm from "./UserSettings";
 import GroupControls from "./GroupControls";
 
 export default function Sidebar() {
