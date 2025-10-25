@@ -250,7 +250,7 @@ export default function DataContextProvider({
       return;
 
     setSlotPresets((prevSlotPresets) => {
-      console.log("set slot preset", deviceSlot, presetName);
+      console.log("set slot preset", deviceSlot, presetName);   // TODO remove
       const newSlotPresets = {
         ...prevSlotPresets,
       };
@@ -261,7 +261,7 @@ export default function DataContextProvider({
     // slotPresets[deviceSlot] = presetName; // TODO: do not overwrite the whole object, but also give signal to local storage update (missing here)
   };
 
-  useEffect(() => console.log(slotPresets), [slotPresets]);
+  useEffect(() => console.log(slotPresets), [slotPresets]);   // TODO remove
 
   const handleSelectOutput = (deviceId: string, state: boolean) => {
     if (!isConnected) return;
