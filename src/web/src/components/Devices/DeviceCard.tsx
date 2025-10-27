@@ -58,7 +58,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
       onClick={(event) => toggleUserConnectionToDevice(event, device.id)}
       style={{
         cursor: "pointer",
-        ...(userIsConnectedToDevice && { "border-color": userColor }),
+        ...(userIsConnectedToDevice && { borderColor: userColor }),
       }}
     >
       {/* Slot Badge */}
