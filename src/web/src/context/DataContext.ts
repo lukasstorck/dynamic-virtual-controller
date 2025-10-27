@@ -37,7 +37,6 @@ export interface DataContextType {
 
   handleJoinGroup: (groupId: string) => void;
   handleLeaveGroup: React.Dispatch<void>; // TODO: fix typing
-  handleCopyGroupLink: React.Dispatch<void>;
   handleRenameOutput: (deviceId: string, newName: string) => void;
   handleSelectOutput: (deviceId: string, state: boolean) => void;
   handleKeyPress: (event: KeyboardEvent, state: number) => void;

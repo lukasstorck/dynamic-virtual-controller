@@ -48,14 +48,6 @@ export function useConnectionManager({
     return { devicesById: byId, devicesBySlot: bySlot };
   }, [devices]);
 
-  const handleCopyGroupLink = useCallback(() => {
-    const params = new URLSearchParams({
-      group_id: groupId,
-    }).toString();
-    const link = `${window.location.origin}?${params}`;
-    navigator.clipboard.writeText(link);
-  }, [groupId]);
-
   const handleWebSocketMessage = useCallback(
     (data: WebSocketMessage) => {
       switch (data.type) {
@@ -260,7 +252,6 @@ export function useConnectionManager({
     user,
     devicesById,
     devicesBySlot,
-    handleCopyGroupLink,
     handleLeaveGroup,
     handleJoinGroup,
     handleRenameOutput,

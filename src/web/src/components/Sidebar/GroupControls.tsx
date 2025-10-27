@@ -1,3 +1,4 @@
+import { useCallback } from "react";
 import { Form, Button, Stack } from "react-bootstrap";
 import { useDataContext } from "../../hooks/useDataContext";
 
@@ -8,8 +9,15 @@ export default function GroupControls() {
     handleJoinGroup,
     handleLeaveGroup,
     isConnected,
-    handleCopyGroupLink,
   } = useDataContext();
+
+  const handleCopyGroupLink = useCallback(() => {
+    const params = new URLSearchParams({
+      group_id: groupId,
+    }).toString();
+    const link = `${window.location.origin}?${params}`;
+    navigator.clipboard.writeText(link);
+  }, [groupId]);
 
   return (
     <>
