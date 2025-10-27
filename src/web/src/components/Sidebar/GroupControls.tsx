@@ -23,7 +23,7 @@ export default function GroupControls() {
           <Form.Group className="mb-3" controlId="groupId">
             <Form.Label>Group ID</Form.Label>
             <Form.Control
-              type="text"
+              type="password"
               placeholder="leave blank for a new group"
               value={groupId ? groupId : ""}
               onChange={(e) => setGroupId(e.target.value)}
@@ -39,12 +39,6 @@ export default function GroupControls() {
         </Form>
       ) : (
         <Stack gap={2}>
-          <div>
-            <small className="text-muted">Group ID:</small>
-            {/* TODO: hide group id with "**** (hidden)" and show on click, add tooltip to show */}
-            <div className="fw-bold text-break">{groupId}</div>
-          </div>
-
           <Button
             variant="outline-secondary"
             className="w-100"

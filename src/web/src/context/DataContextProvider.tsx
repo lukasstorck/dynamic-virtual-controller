@@ -41,6 +41,8 @@ export default function DataContextProvider({
     setUserName,
     userColor,
     setUserColor,
+    lastGroupId,
+    setLastGroupId,
     slotPresets,
     setSlotPresets,
     customKeybinds,
@@ -62,18 +64,25 @@ export default function DataContextProvider({
   // TODO: add keybind editor modal and behavior
 
   useEffect(() => {
-    // read group id from url paramters
-    // remove from url and auto join that group
+    // read group id from url paramters and clean up url
     const url = new URL(window.location.href);
-    const urlGroupId = url.searchParams.get("group_id");
-    if (!urlGroupId) return;
+    const urlGroupId = url.searchParams.get("group_id")?.trim();
 
-    setGroupId(urlGroupId.trim());
+    if (urlGroupId) {
+      const newUrl = `${url.origin}${url.pathname}`;
+      window.history.replaceState({}, document.title, newUrl);
+    }
 
-    const newUrl = `${url.origin}${url.pathname}`;
-    window.history.replaceState({}, document.title, newUrl);
-
-    handleJoinGroup(urlGroupId.trim());
+    // take the group id from url paramters or from
+    // local storage and auto join
+    const newGroupId = urlGroupId || lastGroupId;
+    if (!newGroupId) return;
+    setGroupId(newGroupId);
+    if (!websocket.current) handleJoinGroup(newGroupId);
+    // note: usually the line above would only run once, but React in strict mode executes this
+    // effect twice therefore handleJoinGroup() would run twice and the second time intterupts
+    // the connection of the first and there are errors. The check for the empty websocket variable
+    // is added to avoid this behavior.
   }, []);
 
   const handleCopyGroupLink = useCallback(() => {
@@ -209,6 +218,7 @@ export default function DataContextProvider({
 
     newSocket.onopen = () => {
       setIsConnected(true);
+      setLastGroupId(groupId);
       console.info("WebSocket opened");
     };
     newSocket.onerror = () => console.error("WebSocket error");
