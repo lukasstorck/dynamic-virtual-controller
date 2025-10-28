@@ -48,102 +48,120 @@ export function useConnectionManager({
     return { devicesById: byId, devicesBySlot: bySlot };
   }, [devices]);
 
+  const handleConfigMessage = useCallback(
+    (data: Extract<WebSocketMessage, { type: "config" }>) => {
+      if (data.group_id) setGroupId(data.group_id);
+      if (data.user_id) setUserId(data.user_id);
+    },
+    []
+  );
+
+  const handleGroupStateMessage = useCallback(
+    (data: Extract<WebSocketMessage, { type: "group_state" }>) => {
+      // update users
+      setUsers(data.users || []);
+
+      // update devices
+      const updatedDevices = data.output_devices!.map((device) => {
+        if (device.slot in slotPresets) {
+          if (
+            slotPresets[device.slot] !== "None" &&
+            !(slotPresets[device.slot] in device.keybind_presets)
+          ) {
+            // stored preset name is not available in device presets -> reset
+            delete slotPresets[device.slot];
+          }
+        }
+
+        // when no slot preset is stored (or recently reset)
+        // -> set to "default", the first keybind preset or "None"
+        if (!(device.slot in slotPresets)) {
+          if ("default" in device.keybind_presets) {
+            slotPresets[device.slot] = "default"; // TODO: check if this direct manipulation is ok (also see delete above and setter below)
+          } else {
+            slotPresets[device.slot] =
+              Object.keys(device.keybind_presets)[0] || "None";
+          }
+        }
+
+        // assemble list of users that are connected to this device
+        // then create a list of user ids or an empty list
+        const connected_user_ids = // TODO: fix case in js object
+          data.users
+            ?.filter((user) => user.selected_output_devices.includes(device.id))
+            .map((user) => user.id) || [];
+
+        return {
+          ...device,
+          connected_user_ids: connected_user_ids, // TODO: fix case in js object
+        };
+      });
+
+      updatedDevices.sort((a, b) => a.slot - b.slot);
+      setDevices(updatedDevices || []);
+    },
+    [slotPresets]
+  );
+
+  const handleActivityAndPingUpdateMessage = useCallback(
+    (data: Extract<WebSocketMessage, { type: "activity_and_ping" }>) => {
+      // update ping and activity for users
+      setUsers((prevUsers) =>
+        prevUsers.map((user) => {
+          const updatedLastActivity = data.users?.[user.id][0];
+          const updatedPing = data.users?.[user.id][1];
+          return {
+            ...user,
+            lastActivity: updatedLastActivity || user.last_activity,
+            ping: updatedPing || null,
+          };
+        })
+      );
+
+      // update ping for devices
+      setDevices((prevDevices) =>
+        prevDevices.map((device) => {
+          const updatedPing = data.output_devices?.[device.id];
+          return { ...device, ping: updatedPing || null };
+        })
+      );
+    },
+    []
+  );
+
+  const handlePingRequestMessage = useCallback(
+    (data: Extract<WebSocketMessage, { type: "ping" }>) => {
+      websocket.current?.send(JSON.stringify({ type: "pong", id: data.id }));
+    },
+    []
+  );
+
   const handleWebSocketMessage = useCallback(
     (data: WebSocketMessage) => {
       switch (data.type) {
-        case "config": {
-          if (data.group_id) setGroupId(data.group_id);
-          if (data.user_id) setUserId(data.user_id);
+        case "config":
+          handleConfigMessage(data);
           break;
-        }
-
-        case "group_state": {
-          // update users
-          setUsers(data.users || []);
-          // update devices
-          setDevices((prevDevices) => {
-            // TODO: clean up structure, no callback needed to set device (old variable not needed)
-            const updatedDevices = data.output_devices!.map((device) => {
-              if (device.slot in slotPresets) {
-                if (
-                  slotPresets[device.slot] !== "None" &&
-                  !(slotPresets[device.slot] in device.keybind_presets)
-                ) {
-                  // stored preset name is not available in device presets -> reset
-                  delete slotPresets[device.slot];
-                }
-              }
-
-              // when no slot preset is stored (or recently reset)
-              // -> set to "default", the first keybind preset or "None"
-              if (!(device.slot in slotPresets)) {
-                if ("default" in device.keybind_presets) {
-                  slotPresets[device.slot] = "default"; // TODO: check if this direct manipulation is ok (also see delete above and setter below)
-                } else {
-                  slotPresets[device.slot] =
-                    Object.keys(device.keybind_presets)[0] || "None";
-                }
-              }
-
-              // assemble list of users that are connected to this device
-              // then create a list of user ids or an empty list
-              const connected_user_ids = // TODO: fix case in js object
-                data.users
-                  ?.filter((user) =>
-                    user.selected_output_devices.includes(device.id)
-                  )
-                  .map((user) => user.id) || [];
-
-              return {
-                ...device,
-                connected_user_ids: connected_user_ids, // TODO: fix case in js object
-              };
-            });
-
-            return updatedDevices.sort((a, b) => a.slot - b.slot) || [];
-          });
+        case "group_state":
+          handleGroupStateMessage(data);
           break;
-        }
-
-        case "activity_and_ping": {
-          // update ping and activity for users
-          setUsers((prevUsers) =>
-            prevUsers.map((user) => {
-              const updatedLastActivity = data.users?.[user.id][0];
-              const updatedPing = data.users?.[user.id][1];
-              return {
-                ...user,
-                lastActivity: updatedLastActivity || user.last_activity,
-                ping: updatedPing || null,
-              };
-            })
-          );
-
-          // update ping for devices
-          setDevices((prevDevices) =>
-            prevDevices.map((device) => {
-              const updatedPing = data.output_devices?.[device.id];
-              return { ...device, ping: updatedPing || null };
-            })
-          );
+        case "activity_and_ping":
+          handleActivityAndPingUpdateMessage(data);
           break;
-        }
-
-        case "ping": {
-          websocket.current?.send(
-            JSON.stringify({ type: "pong", id: data.id })
-          );
+        case "ping":
+          handlePingRequestMessage(data);
           break;
-        }
-
-        default: {
+        default:
           console.warn("Unknown WebSocket message:", data);
           break;
-        }
       }
-      return;
     },
-    [websocket.current]
+    [
+      handleConfigMessage,
+      handleGroupStateMessage,
+      handleActivityAndPingUpdateMessage,
+      handlePingRequestMessage,
+    ]
   );
 
   const handleLeaveGroup = useCallback(() => {
