@@ -189,6 +189,7 @@ export function useConnectionManager({
     websocket.current = null;
     setUsers([]);
     setDevices([]);
+    setLastGroupId("");
   }, []);
 
   const handleJoinGroup = (groupId: string) => {
