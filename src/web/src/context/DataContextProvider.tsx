@@ -52,6 +52,7 @@ export default function DataContextProvider({
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,
+    sendMessage,
   } = useConnectionManager({
     userName,
     userColor,
@@ -63,14 +64,12 @@ export default function DataContextProvider({
   useEffect(() => {
     if (!isConnected) return;
     // update user data
-    websocket.current?.send(
-      JSON.stringify({
-        type: "update_user_data",
-        name: userName.trim(),
-        color: userColor,
-      })
-    );
-  }, [isConnected, userName, userColor]);
+    sendMessage({
+      type: "update_user_data",
+      name: userName.trim(),
+      color: userColor,
+    });
+  }, [isConnected, userName, userColor, sendMessage]);
 
   // TODO: add keybind editor modal and behavior
 
@@ -185,17 +184,15 @@ export default function DataContextProvider({
       if (!keyMappings) return;
 
       Object.entries(keyMappings).forEach(([deviceId, buttonCode]) => {
-        websocket.current?.send(
-          JSON.stringify({
-            type: "keypress",
-            device_id: deviceId,
-            code: buttonCode,
-            state: state,
-          })
-        );
+        sendMessage({
+          type: "keypress",
+          device_id: deviceId,
+          code: buttonCode,
+          state: state,
+        });
       });
     },
-    [isConnected, activeKeybinds]
+    [isConnected, activeKeybinds, sendMessage]
   );
 
   return (

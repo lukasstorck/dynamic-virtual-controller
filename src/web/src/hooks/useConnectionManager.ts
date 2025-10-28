@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type { Device, SlotPresets, User } from "../types";
 
-type WebSocketMessage =
+type WebSocketIncomingMessage =
   | { type: "config"; user_id: string; group_id: string }
   | { type: "group_state"; users?: User[]; output_devices?: Device[] }
   | {
@@ -10,6 +10,13 @@ type WebSocketMessage =
       output_devices?: Record<string, number>;
     }
   | { type: "ping"; id: string };
+
+type WebSocketOutgoingMessage =
+  | { type: "pong"; id: string }
+  | { type: "rename_output"; id: string; name: string }
+  | { type: "select_output"; id: string; state: boolean }
+  | { type: "update_user_data"; name: string; color: string }
+  | { type: "keypress"; device_id: string; code: string; state: number };
 
 export function useConnectionManager({
   userName,
@@ -24,7 +31,8 @@ export function useConnectionManager({
   setSlotPresets: React.Dispatch<React.SetStateAction<SlotPresets>>;
   setLastGroupId: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const websocket = useRef<WebSocket | null>(null);
+  const websocketRef = useRef<WebSocket | null>(null);
+  const websocket = useRef<WebSocket | null>(null); // TODO: remove
   const [isConnected, setIsConnected] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState("");
@@ -48,8 +56,18 @@ export function useConnectionManager({
     return { devicesById: byId, devicesBySlot: bySlot };
   }, [devices]);
 
+  const sendMessage = useCallback((data: WebSocketOutgoingMessage) => {
+    // const socket = websocketRef.current;         // TODO: use new ref
+    const socket = websocket.current;               // TODO: use new ref
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      console.error(`Sending message ${data} failed: socket is not open`);
+      return;
+    }
+    socket.send(JSON.stringify(data));
+  }, []);
+
   const handleConfigMessage = useCallback(
-    (data: Extract<WebSocketMessage, { type: "config" }>) => {
+    (data: Extract<WebSocketIncomingMessage, { type: "config" }>) => {
       if (data.group_id) setGroupId(data.group_id);
       if (data.user_id) setUserId(data.user_id);
     },
@@ -57,7 +75,7 @@ export function useConnectionManager({
   );
 
   const handleGroupStateMessage = useCallback(
-    (data: Extract<WebSocketMessage, { type: "group_state" }>) => {
+    (data: Extract<WebSocketIncomingMessage, { type: "group_state" }>) => {
       // update users
       setUsers(data.users || []);
 
@@ -104,7 +122,9 @@ export function useConnectionManager({
   );
 
   const handleActivityAndPingUpdateMessage = useCallback(
-    (data: Extract<WebSocketMessage, { type: "activity_and_ping" }>) => {
+    (
+      data: Extract<WebSocketIncomingMessage, { type: "activity_and_ping" }>
+    ) => {
       // update ping and activity for users
       setUsers((prevUsers) =>
         prevUsers.map((user) => {
@@ -130,14 +150,14 @@ export function useConnectionManager({
   );
 
   const handlePingRequestMessage = useCallback(
-    (data: Extract<WebSocketMessage, { type: "ping" }>) => {
-      websocket.current?.send(JSON.stringify({ type: "pong", id: data.id }));
+    (data: Extract<WebSocketIncomingMessage, { type: "ping" }>) => {
+      sendMessage({ type: "pong", id: data.id });
     },
-    []
+    [sendMessage]
   );
 
   const handleWebSocketMessage = useCallback(
-    (data: WebSocketMessage) => {
+    (data: WebSocketIncomingMessage) => {
       switch (data.type) {
         case "config":
           handleConfigMessage(data);
@@ -183,25 +203,24 @@ export function useConnectionManager({
       group_id: groupId,
     }).toString();
 
-    const newSocket = new WebSocket(params ? `${url}?${params}` : url);
-    newSocket.onmessage = (event: MessageEvent) => {
-      const data: WebSocketMessage = JSON.parse(event.data);
+    const socket = new WebSocket(params ? `${url}?${params}` : url);
+    socket.onmessage = (event: MessageEvent) => {
+      const data: WebSocketIncomingMessage = JSON.parse(event.data);
       handleWebSocketMessage(data);
     };
-
-    newSocket.onopen = () => {
+    socket.onopen = () => {
       setIsConnected(true);
       setLastGroupId(groupId);
       console.info("WebSocket opened");
     };
-    newSocket.onerror = () => console.error("WebSocket error");
-    newSocket.onclose = () => {
+    socket.onerror = () => console.error("WebSocket error");
+    socket.onclose = () => {
       setIsConnected(false);
       console.info("WebSocket closed");
       handleLeaveGroup();
     };
 
-    websocket.current = newSocket;
+    websocket.current = socket;
   };
 
   const handleRenameOutput = (deviceId: string, newName: string) => {
@@ -210,13 +229,11 @@ export function useConnectionManager({
     if (devicesById[deviceId].name === newName) return;
     if (newName.trim() === "") return;
 
-    websocket.current?.send(
-      JSON.stringify({
-        type: "rename_output",
-        id: deviceId,
-        name: newName.trim(),
-      })
-    );
+    sendMessage({
+      type: "rename_output",
+      id: deviceId,
+      name: newName.trim(),
+    });
   };
 
   const handleSelectKeybindPreset = (
@@ -247,13 +264,11 @@ export function useConnectionManager({
     if (!isConnected) return;
     if (user?.selected_output_devices.includes(deviceId) === state) return;
 
-    websocket.current?.send(
-      JSON.stringify({
-        type: "select_output",
-        id: deviceId,
-        state: state,
-      })
-    );
+    sendMessage({
+      type: "select_output",
+      id: deviceId,
+      state: state,
+    });
   };
 
   return {
@@ -275,5 +290,6 @@ export function useConnectionManager({
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,
+    sendMessage,
   };
 }
