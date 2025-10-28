@@ -1,8 +1,9 @@
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Form, Button, Stack } from "react-bootstrap";
 import { useDataContext } from "../../hooks/useDataContext";
 
 export default function GroupControls() {
+  const groupIdInputRef = useRef<HTMLInputElement>(null);
   const {
     groupId,
     setGroupId,
@@ -19,22 +20,33 @@ export default function GroupControls() {
     navigator.clipboard.writeText(link);
   }, [groupId]);
 
+  const handleEnterKey = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key !== "Enter") return;
+      handleJoinGroup(groupId);
+    },
+    [handleJoinGroup, groupId]
+  );
+
+  useEffect(() => {
+    groupIdInputRef.current?.addEventListener("keydown", handleEnterKey);
+    return () => {
+      groupIdInputRef.current?.removeEventListener("keydown", handleEnterKey);
+    };
+  });
+
   return (
     <>
       {!isConnected ? (
-        <Form
-          onSubmit={(event) => {
-            event.preventDefault();
-            handleJoinGroup(groupId);
-          }}
-        >
+        <div>
           <Form.Group className="mb-3" controlId="groupId">
             <Form.Label>Group ID</Form.Label>
             <Form.Control
+              ref={groupIdInputRef}
               type="password"
               placeholder="leave blank for a new group"
               value={groupId ? groupId : ""}
-              onChange={(e) => setGroupId(e.target.value)}
+              onChange={(event) => setGroupId(event.target.value)}
             />
           </Form.Group>
           <Button
@@ -44,7 +56,7 @@ export default function GroupControls() {
           >
             Join Group
           </Button>
-        </Form>
+        </div>
       ) : (
         <Stack gap={2}>
           <Button
