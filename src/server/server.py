@@ -66,7 +66,7 @@ class OutputDevice:
         self.websocket = websocket
         self.name = name or id
         self.slot = slot
-        self.keybind_presets: dict[str, dict[str, str]] = keybind_presets
+        self.keybind_presets: dict[str, dict[str, str]] = keybind_presets   # TODO: make it a dict[str, list[str, str]]
         self.allowed_events: set[str] = allowed_events
         self.pings: list[float] = []
 
