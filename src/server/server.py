@@ -60,11 +60,12 @@ class User:
 
 
 class OutputDevice:
-    def __init__(self, id: str, websocket: fastapi.WebSocket, name: str, group_id: str, keybind_presets: dict[str, dict[str, str]], allowed_events: set[str]):
+    def __init__(self, id: str, websocket: fastapi.WebSocket, name: str, group_id: str, slot: int, keybind_presets: dict[str, dict[str, str]], allowed_events: set[str]):
         self.id = id
         self.group_id = group_id
         self.websocket = websocket
         self.name = name or id
+        self.slot = slot
         self.keybind_presets: dict[str, dict[str, str]] = keybind_presets
         self.allowed_events: set[str] = allowed_events
         self.pings: list[float] = []
@@ -76,6 +77,7 @@ class OutputDevice:
         return {
             'id': self.id,
             'name': self.name,
+            'slot': self.slot,
             'connected_users': connected_users,
             'keybind_presets': self.keybind_presets,
             'allowed_events': list(self.allowed_events),
@@ -98,11 +100,19 @@ class OutputClient:
             keybind_presets: dict[str, dict[str, str]],
     ):
         group = await ConnectionManager.get().get_group(group_id)
+
+        # Find the lowest available slot number
+        used_slots = {device.slot for device in group.output_devices.values()}
+        slot = 1
+        while slot in used_slots:
+            slot += 1
+
         output_device = OutputDevice(
             id=output_device_id,
             websocket=self.websocket,
             name=device_name,
             group_id=group.id,
+            slot=slot,
             keybind_presets=keybind_presets,
             allowed_events=allowed_events,
         )
@@ -118,7 +128,7 @@ class OutputClient:
             for user in group.users.values():
                 user.selected_output_devices.pop(device.id, None)
             group.output_devices.pop(device.id, None)
-            print(f'[INFO] Device {device.id} removed from group {group.id}')
+            print(f'[INFO] Device {device.id} (slot {device.slot}) removed from group {group.id}')
             groups.add(group)
 
         self.devices.clear()
@@ -142,6 +152,8 @@ class Group:
                 if output_device.id in user.selected_output_devices
             ]
             output_devices_data.append(output_device.serialize(connected_users))
+
+        output_devices_data.sort(key=lambda device: device['slot'])
 
         return {
             'type': 'group_state',
@@ -436,10 +448,13 @@ async def ws_output(websocket: fastapi.WebSocket):
                     'device_id': output_device.id,
                     'temporary_id': temporary_id,
                     'group_id': output_device.group_id,
+                    'slot': output_device.slot,
                 }))
 
                 group = await ConnectionManager.get().get_group(output_device.group_id)
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                print(f'[INFO] Device {output_device.id} registered in group {group.id} with slot {output_device.slot}')
+
             elif incoming_data.get('type') == 'pong':
                 await ConnectionManager.get().handle_pong(output_client.id, incoming_data)
 
