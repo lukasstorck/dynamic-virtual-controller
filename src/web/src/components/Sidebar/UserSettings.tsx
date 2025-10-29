@@ -12,7 +12,7 @@ export default function SettingsForm() {
   } = useDataContext();
 
   return (
-    <Form>
+    <div>
       <Form.Group className="mb-3" controlId="userName">
         <Form.Label>Name</Form.Label>
         <Form.Control
@@ -47,6 +47,6 @@ export default function SettingsForm() {
         </span>
         Edit Keybinds
       </Button>
-    </Form>
+    </div>
   );
 }
