@@ -351,8 +351,8 @@ async def ws_user(websocket: fastapi.WebSocket):
                 color = incoming_data.get('color').lower().strip()
                 if color != '' and not is_too_white(color):
                     user.color = incoming_data.get('color')
-                await group.broadcast_to_users(json.dumps(group.serialize_state()))
                 user.last_activity = time.time()
+                await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'select_output':
                 selected_device = incoming_data.get('id')
@@ -362,8 +362,8 @@ async def ws_user(websocket: fastapi.WebSocket):
                         user.selected_output_devices[selected_device] = True
                     else:
                         user.selected_output_devices.pop(selected_device, None)
-                await group.broadcast_to_users(json.dumps(group.serialize_state()))
                 user.last_activity = time.time()
+                await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'keypress':
                 device_id = incoming_data.get('device_id')
@@ -395,8 +395,8 @@ async def ws_user(websocket: fastapi.WebSocket):
                         'device_id': target_id,
                         'name': device.name,
                     }))
-                await group.broadcast_to_users(json.dumps(group.serialize_state()))
                 user.last_activity = time.time()
+                await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'pong':
                 await ConnectionManager.get().handle_pong(user.id, incoming_data)
