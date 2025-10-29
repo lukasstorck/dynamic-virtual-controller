@@ -329,6 +329,7 @@ async def ws_user(websocket: fastapi.WebSocket):
         color=urllib.parse.unquote_plus(query_params.get('color', '')).strip().lower(),
     )
     ConnectionManager.get().users[user.id] = user
+    print(f'[INFO] User {user.name} ({user.id}) started connection')
 
     group = await ConnectionManager.get().get_group(group_id)
     group.users[user.id] = user
@@ -341,6 +342,7 @@ async def ws_user(websocket: fastapi.WebSocket):
 
     try:
         await group.broadcast_to_users(json.dumps(group.serialize_state()))
+        print(f'[INFO] User {user.name} ({user.id}) joined group {group.id}')
 
         while True:
             message = await websocket.receive_text()
@@ -405,6 +407,7 @@ async def ws_user(websocket: fastapi.WebSocket):
         group.users.pop(user.id, None)
         await group.broadcast_to_users(json.dumps(group.serialize_state()))
         ConnectionManager.get().users.pop(user.id, None)
+        print(f'[INFO] User {user.name} ({user.id}) left group {group.id}')
 
 
 # === Output WebSocket ===
