@@ -345,7 +345,11 @@ async def ws_user(websocket: fastapi.WebSocket):
         print(f'[INFO] User {user.name} ({user.id}) joined group {group.id}')
 
         while True:
-            message = await websocket.receive_text()
+            try:
+                message = await websocket.receive_text()
+            except RuntimeError as error:
+                raise fastapi.WebSocketDisconnect(reason=f'received message on closed connection (probably due to a race condition between shortly timed normal and close message): {error}')
+
             incoming_data: dict[str, str] = json.loads(message)
 
             if incoming_data.get('type') == 'update_user_data':
