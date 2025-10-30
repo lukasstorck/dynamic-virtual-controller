@@ -19,20 +19,13 @@ type WebSocketOutgoingMessage =
   | { type: "keypress"; device_id: string; code: string; state: number };
 
 export function useConnectionManager({
-  userName,
-  userColor,
-  slotPresets,
   setSlotPresets,
   setLastGroupId,
 }: {
-  userName: string;
-  userColor: string;
-  slotPresets: SlotPresets;
   setSlotPresets: React.Dispatch<React.SetStateAction<SlotPresets>>;
   setLastGroupId: React.Dispatch<React.SetStateAction<string>>;
 }) {
   const websocketRef = useRef<WebSocket | null>(null);
-  const websocket = useRef<WebSocket | null>(null); // TODO: remove
   const [isConnected, setIsConnected] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState("");
@@ -57,8 +50,7 @@ export function useConnectionManager({
   }, [devices]);
 
   const sendMessage = useCallback((data: WebSocketOutgoingMessage) => {
-    // const socket = websocketRef.current;         // TODO: use new ref
-    const socket = websocket.current;               // TODO: use new ref
+    const socket = websocketRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) {
       console.error(`Sending message ${data} failed: socket is not open`);
       return;
@@ -81,27 +73,6 @@ export function useConnectionManager({
 
       // update devices
       const updatedDevices = data.output_devices!.map((device) => {
-        if (device.slot in slotPresets) {
-          if (
-            slotPresets[device.slot] !== "None" &&
-            !(slotPresets[device.slot] in device.keybind_presets)
-          ) {
-            // stored preset name is not available in device presets -> reset
-            delete slotPresets[device.slot];
-          }
-        }
-
-        // when no slot preset is stored (or recently reset)
-        // -> set to "default", the first keybind preset or "None"
-        if (!(device.slot in slotPresets)) {
-          if ("default" in device.keybind_presets) {
-            slotPresets[device.slot] = "default"; // TODO: check if this direct manipulation is ok (also see delete above and setter below)
-          } else {
-            slotPresets[device.slot] =
-              Object.keys(device.keybind_presets)[0] || "None";
-          }
-        }
-
         // assemble list of users that are connected to this device
         // then create a list of user ids or an empty list
         const connected_user_ids = // TODO: fix case in js object
@@ -115,10 +86,38 @@ export function useConnectionManager({
         };
       });
 
+      // update slot presets
+      setSlotPresets((prevSlotPresets) => {
+        const updatedSlotPresets = { ...prevSlotPresets };
+
+        data.output_devices?.forEach((device) => {
+          if (device.slot in updatedSlotPresets) {
+            if (
+              updatedSlotPresets[device.slot] !== "None" &&
+              !(updatedSlotPresets[device.slot] in device.keybind_presets)
+            ) {
+              // stored preset name is not available in device presets -> reset
+              delete updatedSlotPresets[device.slot];
+            }
+          }
+
+          // when no slot preset is stored (or if it was recently reset)
+          // -> set to "default", the first keybind preset or "None"
+          if (!(device.slot in updatedSlotPresets)) {
+            updatedSlotPresets[device.slot] =
+              "default" in device.keybind_presets
+                ? "default"
+                : Object.keys(device.keybind_presets)[0] || "None";
+          }
+        });
+
+        return updatedSlotPresets;
+      });
+
       updatedDevices.sort((a, b) => a.slot - b.slot);
       setDevices(updatedDevices || []);
     },
-    [slotPresets]
+    []
   );
 
   const handleActivityAndPingUpdateMessage = useCallback(
@@ -157,7 +156,8 @@ export function useConnectionManager({
   );
 
   const handleWebSocketMessage = useCallback(
-    (data: WebSocketIncomingMessage) => {
+    (event: MessageEvent) => {
+      const data: WebSocketIncomingMessage = JSON.parse(event.data);
       switch (data.type) {
         case "config":
           handleConfigMessage(data);
@@ -185,44 +185,52 @@ export function useConnectionManager({
   );
 
   const handleLeaveGroup = useCallback(() => {
-    if (websocket.current) websocket.current.close();
-    websocket.current = null;
-    setUsers([]);
-    setDevices([]);
-    setLastGroupId("");
+    if (websocketRef.current) websocketRef.current.close();
   }, []);
 
-  const handleJoinGroup = (groupId: string) => {
-    if (websocket.current) websocket.current.close();
+  const openConnection = useCallback(
+    (userName: string, userColor: string, groupId: string) => {
+      // TODO: actually connect only once and then handle user name/color and group joining/leaving via messages (like with devices on server side)
 
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    let url = `${protocol}://${window.location.host}/ws/user`;
-    url = url.replace(":5173", ":8000"); // TODO remove, only debugging without nginx
-    const params = new URLSearchParams({
-      name: encodeURIComponent(user?.name ?? userName),
-      color: encodeURIComponent(userColor),
-      group_id: groupId,
-    }).toString();
-
-    const socket = new WebSocket(params ? `${url}?${params}` : url);
-    socket.onmessage = (event: MessageEvent) => {
-      const data: WebSocketIncomingMessage = JSON.parse(event.data);
-      handleWebSocketMessage(data);
-    };
-    socket.onopen = () => {
-      setIsConnected(true);
-      setLastGroupId(groupId);
-      console.info("WebSocket opened");
-    };
-    socket.onerror = () => console.error("WebSocket error");
-    socket.onclose = () => {
-      setIsConnected(false);
-      console.info("WebSocket closed");
+      // close previous connection, if any
       handleLeaveGroup();
-    };
 
-    websocket.current = socket;
-  };
+      // assemble websocket url
+      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+      let url = `${protocol}://${window.location.host}/ws/user`;
+      url = url.replace(":5173", ":8000"); // TODO remove, only debugging without nginx
+      const params = new URLSearchParams({
+        name: encodeURIComponent(userName), // TODO: is encode encodeURIComponent() needed in URLSearchParams
+        color: encodeURIComponent(userColor),
+        group_id: encodeURIComponent(groupId), // TODO: check if also on server side is uri encoded
+      }).toString();
+
+      // initialize new connection
+      const socket = new WebSocket(params ? `${url}?${params}` : url);
+      socket.onmessage = handleWebSocketMessage;
+      socket.onopen = () => {
+        setIsConnected(true);
+        setLastGroupId(groupId);
+        console.info("WebSocket opened");
+      };
+      socket.onerror = (event) => console.error("WebSocket error:", event);
+      socket.onclose = () => {
+        setIsConnected(false);
+        // websocketRef.current = null; // TODO: this leads to errors when reloading as some message (like ping) are send the old socket which is now null
+        // TODO: it seems that the old connection is sometimes still active and was not closed, as sometimes there are duplicated devices and also two connections on the server
+
+        // reset state
+        setUsers([]);
+        setDevices([]);
+        setLastGroupId(""); // TODO: only reset las group id when actively leaving the server, not on reload, page close or when losing the connection
+
+        console.info("WebSocket closed");
+      };
+
+      websocketRef.current = socket;
+    },
+    [handleLeaveGroup, handleWebSocketMessage]
+  );
 
   const handleRenameOutput = (deviceId: string, newName: string) => {
     if (!isConnected) return;
@@ -257,8 +265,6 @@ export function useConnectionManager({
       newSlotPresets[deviceSlot] = presetName;
       return newSlotPresets;
     });
-
-    // slotPresets[deviceSlot] = presetName; // TODO: do not overwrite the whole object, but also give signal to local storage update (missing here)
   };
 
   const handleSelectOutput = (deviceId: string, state: boolean) => {
@@ -273,7 +279,6 @@ export function useConnectionManager({
   };
 
   return {
-    websocket,
     isConnected,
     userId,
     setUserId,
@@ -287,7 +292,7 @@ export function useConnectionManager({
     devicesById,
     devicesBySlot,
     handleLeaveGroup,
-    handleJoinGroup,
+    openConnection,
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,

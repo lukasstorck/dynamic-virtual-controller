@@ -34,7 +34,6 @@ export default function DataContextProvider({
   } = useLocalStorageUserData();
 
   const {
-    websocket,
     isConnected,
     userId,
     setUserId,
@@ -48,18 +47,22 @@ export default function DataContextProvider({
     devicesById,
     devicesBySlot,
     handleLeaveGroup,
-    handleJoinGroup,
+    openConnection,
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,
     sendMessage,
   } = useConnectionManager({
-    userName,
-    userColor,
-    slotPresets,
     setSlotPresets,
     setLastGroupId,
   });
+
+  const handleJoinGroup = useCallback(
+    (groupId: string) => {
+      openConnection(userName, userColor, groupId);
+    },
+    [openConnection, userName, userColor]
+  );
 
   useEffect(() => {
     if (!isConnected) return;
@@ -88,11 +91,7 @@ export default function DataContextProvider({
     const newGroupId = urlGroupId || lastGroupId;
     if (!newGroupId) return;
     setGroupId(newGroupId);
-    if (!websocket.current) handleJoinGroup(newGroupId);
-    // note: usually the line above would only run once, but React in strict mode executes this
-    // effect twice therefore handleJoinGroup() would run twice and the second time intterupts
-    // the connection of the first and there are errors. The check for the empty websocket variable
-    // is added to avoid this behavior.
+    handleJoinGroup(newGroupId);
   }, []);
 
   const usersById = useMemo(() => {
@@ -216,7 +215,6 @@ export default function DataContextProvider({
         setSlotPresets,
         handleSelectKeybindPreset,
         user,
-        websocket,
         activeKeybinds,
         isConnected,
         handleJoinGroup,

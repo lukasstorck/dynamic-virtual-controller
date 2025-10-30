@@ -29,8 +29,6 @@ export interface DataContextType {
 
   user: User | null;
 
-  websocket: React.Ref<WebSocket | null>;
-
   activeKeybinds: Record<string, Record<string, string>>;
 
   isConnected: boolean;
