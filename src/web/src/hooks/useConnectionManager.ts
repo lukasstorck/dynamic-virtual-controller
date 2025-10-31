@@ -198,7 +198,6 @@ export function useConnectionManager({
       // assemble websocket url
       const protocol = window.location.protocol === "https:" ? "wss" : "ws";
       let url = `${protocol}://${window.location.host}/ws/user`;
-      url = url.replace(":5173", ":8000"); // TODO remove, only debugging without nginx
       const params = new URLSearchParams({
         name: encodeURIComponent(userName), // TODO: is encode encodeURIComponent() needed in URLSearchParams
         color: encodeURIComponent(userColor),
