@@ -31,7 +31,7 @@ export interface DataContextType {
 
   activeKeybinds: Record<string, Record<string, string>>;
 
-  isConnected: boolean;
+  connectionStatus: number;
 
   handleJoinGroup: (groupId: string) => void;
   handleLeaveGroup: React.Dispatch<void>; // TODO: fix typing

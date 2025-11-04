@@ -30,3 +30,9 @@ export interface CustomKeybind extends Keybind {
 export interface SlotPresets {
   [slot: number]: string;
 }
+
+export const Status = {
+  Disconnected: 0,
+  Connected: 1,
+  JoinedGroup: 2,
+};

@@ -1,9 +1,15 @@
-import { useCallback, useMemo, useRef, useState } from "react";
-import type { Device, SlotPresets, User } from "../types";
+import { useCallback, useMemo, useState } from "react";
+import { Status, type Device, type SlotPresets, type User } from "../types";
+import useWebSocket from "react-use-websocket";
 
 type WebSocketIncomingMessage =
-  | { type: "config"; user_id: string; group_id: string }
-  | { type: "group_state"; users?: User[]; output_devices?: Device[] }
+  | { type: "config"; user_id: string; user_name?: string; user_color?: string }
+  | {
+      type: "group_state";
+      group_id: string;
+      users?: User[];
+      output_devices?: Device[];
+    }
   | {
       type: "activity_and_ping";
       users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
@@ -13,20 +19,40 @@ type WebSocketIncomingMessage =
 
 type WebSocketOutgoingMessage =
   | { type: "pong"; id: string }
+  | { type: "join_group"; group_id: string }
+  | { type: "leave_group" }
   | { type: "rename_output"; id: string; name: string }
   | { type: "select_output"; id: string; state: boolean }
   | { type: "update_user_data"; name: string; color: string }
   | { type: "keypress"; device_id: string; code: string; state: number };
 
+const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+const websocketUrl = `${protocol}://${window.location.host}/ws/user`;
+
 export function useConnectionManager({
   setSlotPresets,
+  lastGroupId,
   setLastGroupId,
+  setUserName,
+  setUserColor,
 }: {
   setSlotPresets: React.Dispatch<React.SetStateAction<SlotPresets>>;
+  lastGroupId: string;
   setLastGroupId: React.Dispatch<React.SetStateAction<string>>;
+  setUserName: React.Dispatch<React.SetStateAction<string>>;
+  setUserColor: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const websocketRef = useRef<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const { sendJsonMessage } = useWebSocket(websocketUrl, {
+    onOpen: () => {
+      setConnectionStatus(Status.Connected);
+
+      handleJoinGroup(lastGroupId);
+    },
+    onClose: (_) => setConnectionStatus(Status.Disconnected),
+    onMessage: (event) => handleWebSocketMessage(event),
+  });
+
+  const [connectionStatus, setConnectionStatus] = useState(Status.Disconnected);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState("");
   const [users, setUsers] = useState<User[]>([]);
@@ -49,25 +75,26 @@ export function useConnectionManager({
     return { devicesById: byId, devicesBySlot: bySlot };
   }, [devices]);
 
-  const sendMessage = useCallback((data: WebSocketOutgoingMessage) => {
-    const socket = websocketRef.current;
-    if (!socket || socket.readyState !== WebSocket.OPEN) {
-      console.error(`Sending message ${data} failed: socket is not open`);
-      return;
-    }
-    socket.send(JSON.stringify(data));
-  }, []);
+  const sendMessage = useCallback(
+    (data: WebSocketOutgoingMessage) => {
+      sendJsonMessage(data);
+    },
+    [sendJsonMessage]
+  );
 
   const handleConfigMessage = useCallback(
     (data: Extract<WebSocketIncomingMessage, { type: "config" }>) => {
-      if (data.group_id) setGroupId(data.group_id);
       if (data.user_id) setUserId(data.user_id);
+      if (data.user_name) setUserName(data.user_name);
+      if (data.user_color) setUserColor(data.user_color);
     },
-    []
+    [setUserId, setUserName, setUserColor]
   );
 
   const handleGroupStateMessage = useCallback(
     (data: Extract<WebSocketIncomingMessage, { type: "group_state" }>) => {
+      setGroupId(data.group_id);
+
       // update users
       setUsers(data.users || []);
 
@@ -117,7 +144,7 @@ export function useConnectionManager({
       updatedDevices.sort((a, b) => a.slot - b.slot);
       setDevices(updatedDevices || []);
     },
-    []
+    [setGroupId, setUsers, setSlotPresets, setDevices]
   );
 
   const handleActivityAndPingUpdateMessage = useCallback(
@@ -145,7 +172,7 @@ export function useConnectionManager({
         })
       );
     },
-    []
+    [setUsers, setDevices]
   );
 
   const handlePingRequestMessage = useCallback(
@@ -184,55 +211,41 @@ export function useConnectionManager({
     ]
   );
 
-  const handleLeaveGroup = useCallback(() => {
-    if (websocketRef.current) websocketRef.current.close();
-  }, []);
+  const handleJoinGroup = useCallback(
+    (groupId: string) => {
+      sendMessage({
+        type: "join_group",
+        group_id: groupId,
+      });
 
-  const openConnection = useCallback(
-    (userName: string, userColor: string, groupId: string) => {
-      // TODO: actually connect only once and then handle user name/color and group joining/leaving via messages (like with devices on server side)
-
-      // close previous connection, if any
-      handleLeaveGroup();
-
-      // assemble websocket url
-      const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-      let url = `${protocol}://${window.location.host}/ws/user`;
-      const params = new URLSearchParams({
-        name: encodeURIComponent(userName), // TODO: is encode encodeURIComponent() needed in URLSearchParams
-        color: encodeURIComponent(userColor),
-        group_id: encodeURIComponent(groupId), // TODO: check if also on server side is uri encoded
-      }).toString();
-
-      // initialize new connection
-      const socket = new WebSocket(params ? `${url}?${params}` : url);
-      socket.onmessage = handleWebSocketMessage;
-      socket.onopen = () => {
-        setIsConnected(true);
-        setLastGroupId(groupId);
-        console.info("WebSocket opened");
-      };
-      socket.onerror = (event) => console.error("WebSocket error:", event);
-      socket.onclose = () => {
-        setIsConnected(false);
-        // websocketRef.current = null; // TODO: this leads to errors when reloading as some message (like ping) are send the old socket which is now null
-        // TODO: it seems that the old connection is sometimes still active and was not closed, as sometimes there are duplicated devices and also two connections on the server
-
-        // reset state
-        setUsers([]);
-        setDevices([]);
-        setLastGroupId(""); // TODO: only reset las group id when actively leaving the server, not on reload, page close or when losing the connection
-
-        console.info("WebSocket closed");
-      };
-
-      websocketRef.current = socket;
+      setConnectionStatus((previousStatus) => {
+        return previousStatus == Status.Connected
+          ? Status.JoinedGroup
+          : previousStatus;
+      });
+      setLastGroupId(groupId);
     },
-    [handleLeaveGroup, handleWebSocketMessage]
+    [sendMessage, connectionStatus, setConnectionStatus, setLastGroupId]
   );
 
+  const handleLeaveGroup = useCallback(() => {
+    sendMessage({
+      type: "leave_group",
+    });
+
+    setUsers([]);
+    setDevices([]);
+    setLastGroupId("");
+
+    setConnectionStatus((previousStatus) => {
+      return previousStatus == Status.JoinedGroup
+        ? Status.Connected
+        : previousStatus;
+    });
+  }, [sendMessage, setConnectionStatus]);
+
   const handleRenameOutput = (deviceId: string, newName: string) => {
-    if (!isConnected) return;
+    if (connectionStatus !== Status.JoinedGroup) return;
     if (!(deviceId in devicesById)) return;
     if (devicesById[deviceId].name === newName) return;
     if (newName.trim() === "") return;
@@ -267,7 +280,7 @@ export function useConnectionManager({
   };
 
   const handleSelectOutput = (deviceId: string, state: boolean) => {
-    if (!isConnected) return;
+    if (connectionStatus !== Status.JoinedGroup) return;
     if (user?.selected_output_devices.includes(deviceId) === state) return;
 
     sendMessage({
@@ -278,7 +291,7 @@ export function useConnectionManager({
   };
 
   return {
-    isConnected,
+    connectionStatus,
     userId,
     setUserId,
     groupId,
@@ -290,8 +303,8 @@ export function useConnectionManager({
     user,
     devicesById,
     devicesBySlot,
+    handleJoinGroup,
     handleLeaveGroup,
-    openConnection,
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,

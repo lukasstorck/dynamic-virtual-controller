@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Form, Button, Stack } from "react-bootstrap";
 import { useDataContext } from "../../hooks/useDataContext";
+import { Status } from "../../types";
 
 export default function GroupControls() {
   const groupIdInputRef = useRef<HTMLInputElement>(null);
@@ -9,7 +10,7 @@ export default function GroupControls() {
     setGroupId,
     handleJoinGroup,
     handleLeaveGroup,
-    isConnected,
+    connectionStatus,
   } = useDataContext();
 
   const handleCopyGroupLink = useCallback(() => {
@@ -37,7 +38,7 @@ export default function GroupControls() {
 
   return (
     <>
-      {!isConnected ? (
+      {connectionStatus !== Status.JoinedGroup ? (
         <div>
           <Form.Group className="mb-3" controlId="groupId">
             <Form.Label>Group ID</Form.Label>

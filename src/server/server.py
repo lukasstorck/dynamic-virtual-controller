@@ -5,7 +5,6 @@ import fastapi.staticfiles
 import json
 import pathlib
 import time
-import urllib.parse
 import uuid
 
 
@@ -37,7 +36,7 @@ class User:
         self.websocket = websocket
         self.name = name or id
 
-        if color == '' or is_too_white(color):
+        if not color or is_too_white(color):
             color = '#ff6f61'
         self.color = color
 
@@ -319,31 +318,21 @@ async def favicon():
 @app.websocket('/ws/user')
 async def ws_user(websocket: fastapi.WebSocket):
     await websocket.accept()
-    query_params = websocket.query_params
-    group_id = query_params.get('group_id') or uuid.uuid4().hex
-
     user = User(
         id=f'user_{uuid.uuid4().hex[:4]}',
         websocket=websocket,
-        name=urllib.parse.unquote_plus(query_params.get('name', '')).strip(),
-        color=urllib.parse.unquote_plus(query_params.get('color', '')).strip().lower(),
     )
     ConnectionManager.get().users[user.id] = user
     print(f'[INFO] User {user.name} ({user.id}) started connection')
 
-    group = await ConnectionManager.get().get_group(group_id)
-    group.users[user.id] = user
+    group: Group | None = None
 
     await websocket.send_text(json.dumps({
         'type': 'config',
         'user_id': user.id,
-        'group_id': group_id,
     }))
 
     try:
-        await group.broadcast_to_users(json.dumps(group.serialize_state()))
-        print(f'[INFO] User {user.name} ({user.id}) joined group {group.id}')
-
         while True:
             try:
                 message = await websocket.receive_text()
@@ -358,9 +347,45 @@ async def ws_user(websocket: fastapi.WebSocket):
                 if color != '' and not is_too_white(color):
                     user.color = incoming_data.get('color')
                 user.last_activity = time.time()
+                if group:
+                    await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                else:
+                    await websocket.send_text(json.dumps({
+                        'type': 'config',
+                        'user_id': user.id,
+                        'user_name': user.name,
+                        'user_color': user.color,
+                    }))
+
+            elif incoming_data.get('type') == 'join_group':
+                if group:
+                    group.users.pop(user.id, None)
+                    await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                    print(f'[INFO] User {user.name} ({user.id}) left group {group.id}')
+
+                group_id = incoming_data.get('group_id')
+                if not group_id:
+                    group_id = uuid.uuid4().hex
+
+                group = await ConnectionManager.get().get_group(group_id)
+                group.users[user.id] = user
+
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                print(f'[INFO] User {user.name} ({user.id}) joined group {group.id}')
+
+            elif incoming_data.get('type') == 'leave_group':
+                if not group:
+                    continue
+
+                group.users.pop(user.id, None)
+                await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                print(f'[INFO] User {user.name} ({user.id}) left group {group.id}')
+                group = None
 
             elif incoming_data.get('type') == 'select_output':
+                if not group:
+                    continue
+
                 selected_device = incoming_data.get('id')
                 state = incoming_data.get('state')
                 if selected_device and selected_device in group.output_devices:
@@ -373,7 +398,7 @@ async def ws_user(websocket: fastapi.WebSocket):
 
             elif incoming_data.get('type') == 'keypress':
                 device_id = incoming_data.get('device_id')
-                if device_id not in user.selected_output_devices or device_id not in group.output_devices:
+                if not group or device_id not in user.selected_output_devices or device_id not in group.output_devices:
                     continue
 
                 selected_device = group.output_devices[device_id]
@@ -388,6 +413,9 @@ async def ws_user(websocket: fastapi.WebSocket):
                 user.last_activity = time.time()
 
             elif incoming_data.get('type') == 'rename_output':
+                if not group:
+                    continue
+
                 target_id = incoming_data.get('id')
                 new_name = incoming_data.get('name')
                 if target_id in group.output_devices and isinstance(new_name, str):
@@ -408,10 +436,12 @@ async def ws_user(websocket: fastapi.WebSocket):
                 await ConnectionManager.get().handle_pong(user.id, incoming_data)
 
     except fastapi.WebSocketDisconnect:
-        group.users.pop(user.id, None)
-        await group.broadcast_to_users(json.dumps(group.serialize_state()))
+        if group:
+            group.users.pop(user.id, None)
+            await group.broadcast_to_users(json.dumps(group.serialize_state()))
+            print(f'[INFO] User {user.name} ({user.id}) left group {group.id}')
         ConnectionManager.get().users.pop(user.id, None)
-        print(f'[INFO] User {user.name} ({user.id}) left group {group.id}')
+        print(f'[INFO] User {user.name} ({user.id}) disconnected')
 
 
 # === Output WebSocket ===

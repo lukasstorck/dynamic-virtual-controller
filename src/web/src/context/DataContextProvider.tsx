@@ -7,7 +7,7 @@ import {
 } from "react";
 
 import { DataContext } from "./DataContext";
-import type { User } from "../types";
+import { Status, type User } from "../types";
 import { useLocalStorageUserData } from "../hooks/useLocalStorage";
 import { useConnectionManager } from "../hooks/useConnectionManager";
 
@@ -34,7 +34,7 @@ export default function DataContextProvider({
   } = useLocalStorageUserData();
 
   const {
-    isConnected,
+    connectionStatus,
     userId,
     setUserId,
     groupId,
@@ -46,33 +46,29 @@ export default function DataContextProvider({
     user,
     devicesById,
     devicesBySlot,
+    handleJoinGroup,
     handleLeaveGroup,
-    openConnection,
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,
     sendMessage,
   } = useConnectionManager({
     setSlotPresets,
+    lastGroupId,
     setLastGroupId,
+    setUserName,
+    setUserColor,
   });
 
-  const handleJoinGroup = useCallback(
-    (groupId: string) => {
-      openConnection(userName, userColor, groupId);
-    },
-    [openConnection, userName, userColor]
-  );
-
   useEffect(() => {
-    if (!isConnected) return;
+    if (connectionStatus === Status.Connected) return;
     // update user data
     sendMessage({
       type: "update_user_data",
       name: userName.trim(),
       color: userColor,
     });
-  }, [isConnected, userName, userColor, sendMessage]);
+  }, [connectionStatus, userName, userColor, sendMessage]);
 
   // TODO: add keybind editor modal and behavior
 
@@ -91,7 +87,7 @@ export default function DataContextProvider({
     const newGroupId = urlGroupId || lastGroupId;
     if (!newGroupId) return;
     setGroupId(newGroupId);
-    handleJoinGroup(newGroupId);
+    setLastGroupId(newGroupId);
   }, []);
 
   const usersById = useMemo(() => {
@@ -170,7 +166,7 @@ export default function DataContextProvider({
   const handleKeyPress = useCallback(
     (event: KeyboardEvent, state: number) => {
       // only capture and send keys when connected
-      if (!isConnected) return;
+      if (connectionStatus !== Status.JoinedGroup) return;
 
       // do not capture key events when editing device name
       // TODO: also deny on active modal
@@ -191,7 +187,7 @@ export default function DataContextProvider({
         });
       });
     },
-    [isConnected, activeKeybinds, sendMessage]
+    [connectionStatus, activeKeybinds, sendMessage]
   );
 
   return (
@@ -216,7 +212,7 @@ export default function DataContextProvider({
         handleSelectKeybindPreset,
         user,
         activeKeybinds,
-        isConnected,
+        connectionStatus,
         handleJoinGroup,
         handleLeaveGroup,
         handleRenameOutput,
