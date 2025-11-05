@@ -46,7 +46,7 @@ export function useConnectionManager({
     onOpen: () => {
       setConnectionStatus(Status.Connected);
 
-      handleJoinGroup(lastGroupId);
+      if (lastGroupId) handleJoinGroup(lastGroupId);
     },
     onClose: (_) => setConnectionStatus(Status.Disconnected),
     onMessage: (event) => handleWebSocketMessage(event),
