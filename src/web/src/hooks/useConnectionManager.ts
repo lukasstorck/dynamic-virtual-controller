@@ -1,30 +1,13 @@
 import { useCallback, useMemo, useState } from "react";
-import { Status, type Device, type SlotPresets, type User } from "../types";
+import {
+  Status,
+  type Device,
+  type SlotPresets,
+  type User,
+  type WebSocketIncomingMessage,
+  type WebSocketOutgoingMessage,
+} from "../types";
 import useWebSocket from "react-use-websocket";
-
-type WebSocketIncomingMessage =
-  | { type: "config"; user_id: string; user_name?: string; user_color?: string }
-  | {
-      type: "group_state";
-      group_id: string;
-      users?: User[];
-      output_devices?: Device[];
-    }
-  | {
-      type: "activity_and_ping";
-      users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
-      output_devices?: Record<string, number>;
-    }
-  | { type: "ping"; id: string };
-
-type WebSocketOutgoingMessage =
-  | { type: "pong"; id: string }
-  | { type: "join_group"; group_id: string }
-  | { type: "leave_group" }
-  | { type: "rename_output"; id: string; name: string }
-  | { type: "select_output"; id: string; state: boolean }
-  | { type: "update_user_data"; name: string; color: string }
-  | { type: "keypress"; device_id: string; code: string; state: number };
 
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 const websocketUrl = `${protocol}://${window.location.host}/ws/user`;
@@ -102,22 +85,37 @@ export function useConnectionManager({
       setGroupId(data.group_id);
 
       // update users
-      setUsers(data.users || []);
+      setUsers(
+        data.users?.map((user) => ({
+          id: user.id,
+          name: user.name,
+          color: user.color,
+          connectedDeviceIds: user.connected_device_ids,
+          lastActivityTime: user.last_activity_time,
+          lastPing: user.last_ping,
+        })) || []
+      );
 
       // update devices
-      const updatedDevices = data.output_devices!.map((device) => {
-        // assemble list of users that are connected to this device
-        // then create a list of user ids or an empty list
-        const connected_user_ids = // TODO: fix case in js object
-          data.users
-            ?.filter((user) => user.selected_output_devices.includes(device.id))
-            .map((user) => user.id) || [];
+      const updatedDevices =
+        data.output_devices?.map((device) => {
+          // assemble list of users that are connected to this device
+          // then create a list of user ids or an empty list
+          const connectedUserIds =
+            data.users
+              ?.filter((user) => user.connected_device_ids.includes(device.id))
+              .map((user) => user.id) || [];
 
-        return {
-          ...device,
-          connected_user_ids: connected_user_ids, // TODO: fix case in js object
-        };
-      });
+          return {
+            id: device.id,
+            name: device.name,
+            slot: device.slot,
+            keybindPresets: device.keybind_presets,
+            allowedEvents: device.allowed_events,
+            lastPing: device.last_ping,
+            connectedUserIds: connectedUserIds,
+          };
+        }) || [];
 
       // update slot presets
       setSlotPresets((prevSlotPresets) => {
@@ -164,8 +162,8 @@ export function useConnectionManager({
           const updatedPing = data.users?.[user.id][1];
           return {
             ...user,
-            lastActivity: updatedLastActivity || user.last_activity,
-            ping: updatedPing || null,
+            lastActivityTime: updatedLastActivity || user.lastActivityTime,
+            lastPing: updatedPing || null,
           };
         })
       );
@@ -174,7 +172,7 @@ export function useConnectionManager({
       setDevices((prevDevices) =>
         prevDevices.map((device) => {
           const updatedPing = data.output_devices?.[device.id];
-          return { ...device, ping: updatedPing || null };
+          return { ...device, lastPing: updatedPing || null };
         })
       );
     },
@@ -271,7 +269,7 @@ export function useConnectionManager({
     if (
       !(
         presetName === "None" ||
-        presetName in devicesBySlot[deviceSlot].keybind_presets
+        presetName in devicesBySlot[deviceSlot].keybindPresets
       )
     )
       return;
@@ -287,7 +285,7 @@ export function useConnectionManager({
 
   const handleSelectOutput = (deviceId: string, state: boolean) => {
     if (connectionStatus !== Status.JoinedGroup) return;
-    if (user?.selected_output_devices.includes(deviceId) === state) return;
+    if (user?.connectedDeviceIds.includes(deviceId) === state) return;
 
     sendMessage({
       type: "select_output",

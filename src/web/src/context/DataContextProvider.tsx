@@ -105,7 +105,7 @@ export default function DataContextProvider({
     if (!user) return map;
 
     // Preset keybinds
-    user.selected_output_devices.forEach((deviceId) => {
+    user.connectedDeviceIds.forEach((deviceId) => {
       const device = devicesById[deviceId];
       // TODO: get selected preset from slotPreset variable slotPreset[device.slot]
       // TODO: when devices are loaded or updated, ensure that the stored preset name in slotPreset is present for that slot
@@ -120,9 +120,9 @@ export default function DataContextProvider({
       // skip keybind if selected preset name is undefined or null or "None"
       if (!selectedPresetName || selectedPresetName === "None") return;
       // skip keybind if device does not have a preset with the selected preset name
-      if (!(selectedPresetName in device.keybind_presets)) return;
+      if (!(selectedPresetName in device.keybindPresets)) return;
 
-      const selectedKeybinds = device.keybind_presets[selectedPresetName];
+      const selectedKeybinds = device.keybindPresets[selectedPresetName];
       // skip keybind if keybinds of selected preset are undefined or null
       if (!selectedKeybinds) return;
 
@@ -153,7 +153,7 @@ export default function DataContextProvider({
       )
         return;
       const device = devicesBySlot[keybind.slot];
-      if (!device || !user.selected_output_devices.includes(device.id)) return;
+      if (!device || !user.connectedDeviceIds.includes(device.id)) return;
 
       if (!map[keybind.key]) map[keybind.key] = {};
       map[keybind.key][device.id] = keybind.event;

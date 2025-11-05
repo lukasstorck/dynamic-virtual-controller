@@ -50,8 +50,8 @@ function DeviceAccordionItem({
 
   const selectedPresetKeybinds = useMemo(() => {
     if (selectedPresetName === "None") return [];
-    return device.keybind_presets[selectedPresetName];
-  }, [device.keybind_presets, selectedPresetName]);
+    return device.keybindPresets[selectedPresetName];
+  }, [device.keybindPresets, selectedPresetName]);
 
   useEffect(
     () => console.log(selectedPresetKeybinds),
@@ -59,11 +59,11 @@ function DeviceAccordionItem({
   );
 
   const keybindPresetOptions = useMemo(
-    () => ["None", ...Object.keys(device.keybind_presets)],
+    () => ["None", ...Object.keys(device.keybindPresets)],
     [device]
   );
 
-  const sendKeybinds = device.connected_user_ids.includes(userId!);
+  const sendKeybinds = device.connectedUserIds.includes(userId!);
 
   return (
     <Accordion.Item eventKey={eventKey}>

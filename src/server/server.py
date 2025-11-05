@@ -38,8 +38,8 @@ class User:
             color = '#ff6f61'
         self.color = color
 
-        self.last_activity = time.time()
-        self.selected_output_devices: dict[str, bool] = {}
+        self.last_activity_time = time.time()
+        self.connected_device_ids: dict[str, bool] = {}
         self.pings: list[float] = []
 
     def get_ping_average(self):
@@ -50,9 +50,9 @@ class User:
             'id': self.id,
             'name': self.name,
             'color': self.color,
-            'last_activity': self.last_activity,
-            'ping': self.get_ping_average(),
-            'selected_output_devices': [device_id for device_id, state in self.selected_output_devices.items() if state],
+            'last_activity_time': self.last_activity_time,
+            'last_ping': self.get_ping_average(),
+            'connected_device_ids': [device_id for device_id, state in self.connected_device_ids.items() if state],
         }
 
 
@@ -78,7 +78,7 @@ class OutputDevice:
             'connected_users': connected_users,
             'keybind_presets': self.keybind_presets,
             'allowed_events': list(self.allowed_events),
-            'ping': self.get_ping_average(),
+            'last_ping': self.get_ping_average(),
         }
 
 
@@ -123,7 +123,7 @@ class OutputClient:
         for device in self.devices.values():
             group = await ConnectionManager.get().get_group(device.group_id)
             for user in group.users.values():
-                user.selected_output_devices.pop(device.id, None)
+                user.connected_device_ids.pop(device.id, None)
             group.output_devices.pop(device.id, None)
             print(f'[INFO] Device {device.id} (slot {device.slot}) removed from group {group.id}')
             groups.add(group)
@@ -146,7 +146,7 @@ class Group:
         for output_device in self.output_devices.values():
             connected_users = [
                 user.id for user in self.users.values()
-                if output_device.id in user.selected_output_devices
+                if output_device.id in user.connected_device_ids
             ]
             output_devices_data.append(output_device.serialize(connected_users))
 
@@ -160,7 +160,7 @@ class Group:
         }
 
     def serialize_activity_and_ping(self):
-        users = {user.id: [user.last_activity, user.get_ping_average()] for user in self.users.values()}
+        users = {user.id: [user.last_activity_time, user.get_ping_average()] for user in self.users.values()}
         output_devices = {output_device.id: [output_device.get_ping_average()] for output_device in self.output_devices.values()}
 
         return {
@@ -325,7 +325,7 @@ async def ws_user(websocket: fastapi.WebSocket):
                 color = incoming_data.get('color').lower().strip()
                 if color != '' and not is_too_white(color):
                     user.color = incoming_data.get('color')
-                user.last_activity = time.time()
+                user.last_activity_time = time.time()
                 if group:
                     await group.broadcast_to_users(json.dumps(group.serialize_state()))
                 else:
@@ -369,15 +369,15 @@ async def ws_user(websocket: fastapi.WebSocket):
                 state = incoming_data.get('state')
                 if selected_device and selected_device in group.output_devices:
                     if state:
-                        user.selected_output_devices[selected_device] = True
+                        user.connected_device_ids[selected_device] = True
                     else:
-                        user.selected_output_devices.pop(selected_device, None)
-                user.last_activity = time.time()
+                        user.connected_device_ids.pop(selected_device, None)
+                user.last_activity_time = time.time()
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'keypress':
                 device_id = incoming_data.get('device_id')
-                if not group or device_id not in user.selected_output_devices or device_id not in group.output_devices:
+                if not group or device_id not in user.connected_device_ids or device_id not in group.output_devices:
                     continue
 
                 selected_device = group.output_devices[device_id]
@@ -389,7 +389,7 @@ async def ws_user(websocket: fastapi.WebSocket):
                     'code': incoming_data.get('code'),
                     'state': incoming_data.get('state'),
                 }))
-                user.last_activity = time.time()
+                user.last_activity_time = time.time()
 
             elif incoming_data.get('type') == 'rename_output':
                 if not group:
@@ -408,7 +408,7 @@ async def ws_user(websocket: fastapi.WebSocket):
                         'device_id': target_id,
                         'name': device.name,
                     }))
-                user.last_activity = time.time()
+                user.last_activity_time = time.time()
                 await group.broadcast_to_users(json.dumps(group.serialize_state()))
 
             elif incoming_data.get('type') == 'pong':

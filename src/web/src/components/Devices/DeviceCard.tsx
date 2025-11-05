@@ -36,17 +36,17 @@ const DeviceCard: FC<Props> = ({ device }) => {
 
     handleSelectOutput(
       deviceId,
-      !user?.selected_output_devices.includes(deviceId)
+      !user?.connectedDeviceIds.includes(deviceId)
     );
   };
 
   const userIsConnectedToDevice = useMemo(
-    () => user?.selected_output_devices.includes(device.id),
-    [user?.selected_output_devices]
+    () => user?.connectedDeviceIds.includes(device.id),
+    [user?.connectedDeviceIds]
   );
 
   const keybindPresetOptions = useMemo(() => {
-    return ["None"].concat(Object.keys(device.keybind_presets));
+    return ["None"].concat(Object.keys(device.keybindPresets));
   }, [device]);
 
   return (
@@ -118,7 +118,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
         {/* Ping */}
         <div className="mt-2 small text-muted">
           <div>
-            <strong>Ping:</strong> {formatPing(device.ping)}
+            <strong>Ping:</strong> {formatPing(device.lastPing)}
           </div>
         </div>
 
@@ -126,9 +126,9 @@ const DeviceCard: FC<Props> = ({ device }) => {
         <div>
           <strong>Connected Users:</strong>
           <div>
-            {device.connected_user_ids.length > 0 ? (
+            {device.connectedUserIds.length > 0 ? (
               <>
-                {device.connected_user_ids.map((id) => (
+                {device.connectedUserIds.map((id) => (
                   <span
                     key={id}
                     className="d-inline-block px-2 py-1 rounded text-white small m-1"

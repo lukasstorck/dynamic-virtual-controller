@@ -2,9 +2,9 @@ export interface User {
   id: string;
   name: string;
   color: string;
-  selected_output_devices: string[]; // TODO: rename to connected_device_ids
-  last_activity: number; // TODO: rename to last_activity_time
-  ping: number | null; // TODO: rename to last_ping_time
+  connectedDeviceIds: string[];
+  lastActivityTime: number;
+  lastPing: number | null;
 }
 
 export interface Keybind {
@@ -16,10 +16,10 @@ export interface Device {
   id: string;
   name: string;
   slot: number;
-  keybind_presets: Record<string, Keybind[]>;
-  allowed_events: string[];
-  ping: number | null; // TODO: rename to last_ping_time
-  connected_user_ids: string[];
+  keybindPresets: Record<string, Keybind[]>;
+  allowedEvents: string[];
+  lastPing: number | null;
+  connectedUserIds: string[];
 }
 
 export interface CustomKeybind extends Keybind {
@@ -36,3 +36,46 @@ export const Status = {
   Connected: 1,
   JoinedGroup: 2,
 };
+
+export type WebSocketIncomingMessage =
+  | { type: "config"; user_id: string; user_name?: string; user_color?: string }
+  | {
+      type: "group_state";
+      group_id: string;
+      users?: WebSocketMessageUser[];
+      output_devices?: WebSocketMessageDevice[];
+    }
+  | {
+      type: "activity_and_ping";
+      users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
+      output_devices?: Record<string, number>;
+    }
+  | { type: "ping"; id: string };
+
+export type WebSocketOutgoingMessage =
+  | { type: "pong"; id: string }
+  | { type: "join_group"; group_id: string }
+  | { type: "leave_group" }
+  | { type: "rename_output"; id: string; name: string }
+  | { type: "select_output"; id: string; state: boolean }
+  | { type: "update_user_data"; name: string; color: string }
+  | { type: "keypress"; device_id: string; code: string; state: number };
+
+export interface WebSocketMessageDevice {
+  id: string;
+  name: string;
+  slot: number;
+  keybind_presets: Record<string, Keybind[]>;
+  allowed_events: string[];
+  last_ping: number | null;
+  connected_user_ids: string[];
+}
+
+export interface WebSocketMessageUser {
+  id: string;
+  name: string;
+  color: string;
+  connected_device_ids: string[];
+  last_activity_time: number;
+  last_ping: number | null;
+}

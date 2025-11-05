@@ -12,11 +12,11 @@ const UserRow: FC<Props> = ({ user }) => {
 
   const connectedOutputDevicesString = useMemo(() => {
     const selectedDevices = devices.filter((device) =>
-      user.selected_output_devices.includes(device.id)
+      user.connectedDeviceIds.includes(device.id)
     );
     const deviceNames = selectedDevices.map((device) => device.name).join(", ");
     return deviceNames;
-  }, [user.selected_output_devices]);
+  }, [user.connectedDeviceIds]);
 
   const userNameString = useMemo(() => {
     let userName = user.name;
@@ -37,8 +37,8 @@ const UserRow: FC<Props> = ({ user }) => {
           {userNameString}
         </span>
       </td>
-      <td>{formatLastActivity(user.last_activity)}</td>
-      <td>{formatPing(user.ping)}</td>
+      <td>{formatLastActivity(user.lastActivityTime)}</td>
+      <td>{formatPing(user.lastPing)}</td>
       <td>{connectedOutputDevicesString}</td>
     </tr>
   );
