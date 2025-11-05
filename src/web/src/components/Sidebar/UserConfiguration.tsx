@@ -1,7 +1,7 @@
 import { Form, Button } from "react-bootstrap";
 import { useDataContext } from "../../hooks/useDataContext";
 
-export default function SettingsForm() {
+export default function UserConfiguration() {
   // TODO: rename component
   const {
     userName,

@@ -1,5 +1,5 @@
 import { Card, Stack } from "react-bootstrap";
-import SettingsForm from "./UserSettings";
+import UserConfiguration from "./UserConfiguration";
 import GroupControls from "./GroupControls";
 
 export default function Sidebar() {
@@ -8,7 +8,7 @@ export default function Sidebar() {
       <Card.Body>
         <Stack gap={3}>
           <h5>Settings</h5>
-          <SettingsForm />
+          <UserConfiguration />
           <hr />
           <GroupControls />
         </Stack>
