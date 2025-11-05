@@ -332,13 +332,9 @@ async def ws_user(websocket: fastapi.WebSocket):
         'user_id': user.id,
     }))
 
-    try:
-        while True:
-            try:
-                message = await websocket.receive_text()
-            except RuntimeError as error:
-                raise fastapi.WebSocketDisconnect(reason=f'received message on closed connection (probably due to a race condition between shortly timed normal and close message): {error}')
-
+    while True:
+        try:
+            message = await websocket.receive_text()
             incoming_data: dict[str, str] = json.loads(message)
 
             if incoming_data.get('type') == 'update_user_data':
@@ -435,13 +431,21 @@ async def ws_user(websocket: fastapi.WebSocket):
             elif incoming_data.get('type') == 'pong':
                 await ConnectionManager.get().handle_pong(user.id, incoming_data)
 
-    except fastapi.WebSocketDisconnect:
-        if group:
-            group.users.pop(user.id, None)
-            await group.broadcast_to_users(json.dumps(group.serialize_state()))
-            print(f'[INFO] User {user.name} ({user.id}) left group {group.id}')
-        ConnectionManager.get().users.pop(user.id, None)
-        print(f'[INFO] User {user.name} ({user.id}) disconnected')
+        except (
+            RuntimeError,
+            fastapi.WebSocketDisconnect
+        ) as error:
+            if isinstance(error, RuntimeError):
+                print(f'[ERROR] received message on closed connection (probably due to a race condition between shortly timed normal and close message): {error}')
+
+            if group:
+                group.users.pop(user.id, None)
+                await group.broadcast_to_users(json.dumps(group.serialize_state()))
+                print(f'[INFO] User {user.name} ({user.id}) left group {group.id}')
+            ConnectionManager.get().users.pop(user.id, None)
+            print(f'[INFO] User {user.name} ({user.id}) disconnected')
+
+            break
 
 
 # === Output WebSocket ===
@@ -455,8 +459,8 @@ async def ws_output(websocket: fastapi.WebSocket):
     )
     ConnectionManager.get().output_clients[output_client.id] = output_client
 
-    try:
-        while True:
+    while True:
+        try:
             message = await websocket.receive_text()
             incoming_data: dict = json.loads(message)
 
@@ -495,9 +499,10 @@ async def ws_output(websocket: fastapi.WebSocket):
             elif incoming_data.get('type') == 'pong':
                 await ConnectionManager.get().handle_pong(output_client.id, incoming_data)
 
-    except fastapi.WebSocketDisconnect:
-        await output_client.remove_all_devices()
-        ConnectionManager.get().output_clients.pop(output_client.id)
+        except fastapi.WebSocketDisconnect:
+            await output_client.remove_all_devices()
+            ConnectionManager.get().output_clients.pop(output_client.id)
+            break
 
 
 if __name__ == '__main__':

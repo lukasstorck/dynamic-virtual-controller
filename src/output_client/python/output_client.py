@@ -323,7 +323,14 @@ class ConnectionManager:
                         await self.handle_connection()
                     success = True
                     break
-                except (ConnectionAbortedError, ConnectionRefusedError, OSError, websockets.exceptions.InvalidMessage) as error:
+                except (
+                    ConnectionAbortedError,
+                    ConnectionRefusedError,
+                    OSError,
+                    websockets.exceptions.InvalidMessage,
+                    websockets.exceptions.InvalidStatus,
+                ) as error:
+
                     ip_version = "IPv6" if family == socket.AF_INET6 else "IPv4"
                     print(f'[WARN] Connection attempt with {ip_version} failed: {error}')
                     continue
