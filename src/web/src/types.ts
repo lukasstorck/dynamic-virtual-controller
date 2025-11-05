@@ -31,6 +31,20 @@ export interface SlotPresets {
   [slot: number]: string;
 }
 
+export interface GroupState {
+  users: User[];
+  devices: Device[];
+}
+
+export type GroupUpdateAction =
+  | { type: "clear" }
+  | { type: "set_users_and_devices"; users: User[]; devices: Device[] }
+  | {
+      type: "activity_and_ping";
+      users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
+      output_devices?: Record<string, number>; // TODO: rename to devices
+    };
+
 export const Status = {
   Disconnected: 0,
   Connected: 1,
@@ -48,7 +62,7 @@ export type WebSocketIncomingMessage =
   | {
       type: "activity_and_ping";
       users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
-      output_devices?: Record<string, number>;
+      output_devices?: Record<string, number>; // TODO: rename to devices
     }
   | { type: "ping"; id: string };
 
@@ -65,11 +79,13 @@ export interface WebSocketMessageDevice {
   id: string;
   name: string;
   slot: number;
-  keybind_presets: Record<string, Keybind[]>;
+  keybind_presets: Record<string, WebSocketMessageKeybind[]>;
   allowed_events: string[];
   last_ping: number | null;
   connected_user_ids: string[];
 }
+
+export type WebSocketMessageKeybind = [string, string];
 
 export interface WebSocketMessageUser {
   id: string;

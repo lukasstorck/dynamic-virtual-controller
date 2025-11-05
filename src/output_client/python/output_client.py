@@ -60,13 +60,13 @@ class VirtualDevice(abc.ABC):
             name: str,
             group_id: str | None,
             allowed_events: set[str],
-            keybind_presets: dict[str, dict[str, str]],
+            keybind_presets: dict[str, list[tuple[str, str]]],
     ):
         self.id: str | None = None
         self.name = name
         self.group_id: str | None = group_id
         self.allowed_events: set[str] = set(allowed_events)
-        self.keybind_presets: dict[str, dict[str, str]] = keybind_presets
+        self.keybind_presets: dict[str, list[tuple[str, str]]] = keybind_presets
         self.is_connected: bool = False
 
     @abc.abstractmethod
@@ -85,7 +85,7 @@ class UInputDevice(VirtualDevice):
         name: str = 'Generic UInput Device',
         group_id: str | None = None,
         allowed_events: set[str] = None,
-        keybind_presets: dict[str, dict[str, str]] = None,
+        keybind_presets: dict[str, list[tuple[str, str]]] = None,
         uinput_name: str = 'UInput Device',
         bustype: int = 0,
         vendor: int = 0,
@@ -129,13 +129,13 @@ class VirtualXBox360Controller(UInputDevice):
         name: str = 'Virtual Xbox 360 Controller',
         group_id: str | None = None,
         allowed_events: set[str] = None,
-        keybind_presets: dict[str, dict[str, str]] = None,
+        keybind_presets: dict[str, list[tuple[str, str]]] = None,
     ):
         if allowed_events is None:
             allowed_events = KeyCodes.get_event_set_by_name('CONTROLLER_BUTTONS')
 
         if keybind_presets is None:
-            keybind_presets = {'Space': 'BTN_A'}
+            keybind_presets = {'default': [('Space', 'BTN_A')]}
 
         super().__init__(
             name=name,
@@ -362,7 +362,10 @@ if __name__ == '__main__':
 
     connection_details: dict[str] = config.get('connection', {})
     device_config: dict[str, dict] = config.get('devices', {})
-    keybind_preset_library = config.get('keybind_preset_library', {})
+    keybind_preset_library: dict[str, list[list]] = config.get('keybind_preset_library', {})
+    keybind_preset_library: dict[str, list[tuple[str, str]]] = {
+        preset_name: [(keybind[0], keybind[1]) for keybind in keybinds] for preset_name, keybinds in keybind_preset_library.items()
+    }
 
     device_manager = DeviceManager(keybind_preset_library)
     device_manager.initialize_devices(device_config)

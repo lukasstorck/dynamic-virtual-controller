@@ -8,10 +8,10 @@ interface Props {
 }
 
 const UserRow: FC<Props> = ({ user }) => {
-  const { devices, userId } = useDataContext();
+  const { groupState, userId } = useDataContext();
 
   const connectedOutputDevicesString = useMemo(() => {
-    const selectedDevices = devices.filter((device) =>
+    const selectedDevices = groupState.devices.filter((device) =>
       user.connectedDeviceIds.includes(device.id)
     );
     const deviceNames = selectedDevices.map((device) => device.name).join(", ");

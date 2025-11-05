@@ -3,11 +3,7 @@ import { createContext } from "react";
 import type { User, Device, CustomKeybind, SlotPresets } from "../types";
 
 export interface DataContextType {
-  users: User[];
-  setUsers: React.Dispatch<React.SetStateAction<User[]>>;
-
-  devices: Device[];
-  setDevices: React.Dispatch<React.SetStateAction<Device[]>>;
+  groupState: { users: User[]; devices: Device[] };
 
   customKeybinds: CustomKeybind[];
   setCustomKeybinds: React.Dispatch<React.SetStateAction<CustomKeybind[]>>;
@@ -29,7 +25,7 @@ export interface DataContextType {
 
   user: User | null;
 
-  activeKeybinds: Record<string, Record<string, string>>;
+  activeKeybinds: Record<string, [string, string][]>;
 
   connectionStatus: number;
 

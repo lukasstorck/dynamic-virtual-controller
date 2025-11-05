@@ -39,10 +39,7 @@ export default function DataContextProvider({
     setUserId,
     groupId,
     setGroupId,
-    users,
-    setUsers,
-    devices,
-    setDevices,
+    groupState,
     user,
     devicesById,
     devicesBySlot,
@@ -91,15 +88,15 @@ export default function DataContextProvider({
   const usersById = useMemo(() => {
     const byId: Record<string, User> = {};
 
-    users.forEach((user) => {
+    groupState.users.forEach((user) => {
       byId[user.id] = user;
     });
     return byId;
-  }, [users]);
+  }, [groupState]);
 
   const activeKeybinds = useMemo(() => {
-    // TODO: allow for multiple keybinds on one input key (map<key-string, list<tuple<device-string, output-key-string>>>)
-    const map: Record<string, Record<string, string>> = {};
+    // list of tuples [(device id, output event), ...] = map[input event]
+    const map: Record<string, [string, string][]> = {};
     if (!user) return map;
 
     // Preset keybinds
@@ -122,21 +119,12 @@ export default function DataContextProvider({
       // skip keybind if keybinds of selected preset are undefined or null
       if (!selectedKeybinds) return;
 
-      Object.entries(selectedKeybinds).forEach((keybind) => {
-        const [key, event] = keybind;
+      selectedKeybinds.forEach((keybind) => {
+        if (!keybind.key || !keybind.event) return;
 
-        if (!key || !event) return;
-        if (!map[key]) map[key] = {};
-        const eventf: any = event; // TODO fix
-        map[key][device.id] = eventf;
+        if (!map[keybind.key]) map[keybind.key] = [];
+        map[keybind.key].push([device.id, keybind.event]);
       });
-
-      // TODO use keybind object, not loose variables as above
-      // presetKeybinds.map((keybind) => {
-      //   if (!keybind.key || !keybind.event) return;
-      //   if (!map[keybind.key]) map[keybind.key] = {};
-      //   map[keybind.key][device.id] = keybind.event;
-      // });
     });
 
     // Active custom keybinds
@@ -151,14 +139,13 @@ export default function DataContextProvider({
       const device = devicesBySlot[keybind.slot];
       if (!device || !user.connectedDeviceIds.includes(device.id)) return;
 
-      if (!map[keybind.key]) map[keybind.key] = {};
-      map[keybind.key][device.id] = keybind.event;
+      if (!map[keybind.key]) map[keybind.key] = [];
+      map[keybind.key].push([device.id, keybind.event]);
     });
 
     return map;
-  }, [user, devicesById, devicesBySlot, customKeybinds]);
+  }, [user, devicesById, devicesBySlot, customKeybinds, slotPresets]);
 
-  // TODO: split or move to useConnectionManager
   const handleKeyPress = useCallback(
     (event: KeyboardEvent, state: number) => {
       // only capture and send keys when connected
@@ -172,9 +159,9 @@ export default function DataContextProvider({
       if (["button", "input"].includes(clickedDOMTagName)) return;
 
       const keyMappings = activeKeybinds[event.code];
-      if (!keyMappings) return;
+      if (!keyMappings || keyMappings.length === 0) return;
 
-      Object.entries(keyMappings).forEach(([deviceId, buttonCode]) => {
+      keyMappings.forEach(([deviceId, buttonCode]) => {
         sendMessage({
           type: "keypress",
           device_id: deviceId,
@@ -189,10 +176,7 @@ export default function DataContextProvider({
   return (
     <DataContext
       value={{
-        users,
-        setUsers,
-        devices,
-        setDevices,
+        groupState,
         customKeybinds,
         setCustomKeybinds,
         groupId,

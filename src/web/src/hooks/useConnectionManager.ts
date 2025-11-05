@@ -1,16 +1,49 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useReducer, useState } from "react";
 import {
   Status,
   type Device,
+  type GroupState,
+  type GroupUpdateAction,
+  type Keybind,
   type SlotPresets,
-  type User,
   type WebSocketIncomingMessage,
+  type WebSocketMessageKeybind,
   type WebSocketOutgoingMessage,
 } from "../types";
 import useWebSocket from "react-use-websocket";
 
 const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 const websocketUrl = `${protocol}://${window.location.host}/ws/user`;
+
+function groupStateReducer(state: GroupState, action: GroupUpdateAction) {
+  switch (action.type) {
+    case "clear":
+      return { users: [], devices: [] };
+    case "set_users_and_devices":
+      return { users: action.users, devices: action.devices };
+    case "activity_and_ping":
+      state.users.forEach((user, index) => {
+        if (action.users && user.id in action.users) {
+          const updatedLastActivity = action.users?.[user.id][0];
+          const updatedPing = action.users?.[user.id][1];
+
+          state.users[index].lastActivityTime =
+            updatedLastActivity || user.lastActivityTime;
+          state.users[index].lastPing = updatedPing || null;
+        }
+      });
+      state.devices.forEach((device, index) => {
+        if (action.output_devices && device.id in action.output_devices) {
+          const updatedPing = action.output_devices?.[device.id];
+
+          state.devices[index].lastPing = updatedPing || null;
+        }
+      });
+      return state;
+    default:
+      return state;
+  }
+}
 
 export function useConnectionManager({
   setSlotPresets,
@@ -34,8 +67,7 @@ export function useConnectionManager({
     onClose: (_) => {
       setConnectionStatus(Status.Disconnected);
 
-      setUsers([]);
-      setDevices([]);
+      updateGroupState({ type: "clear" });
     },
     onMessage: (event) => handleWebSocketMessage(event),
     shouldReconnect: (_) => true,
@@ -44,25 +76,27 @@ export function useConnectionManager({
   const [connectionStatus, setConnectionStatus] = useState(Status.Disconnected);
   const [userId, setUserId] = useState<string | null>(null);
   const [groupId, setGroupId] = useState("");
-  const [users, setUsers] = useState<User[]>([]);
-  const [devices, setDevices] = useState<Device[]>([]);
+  const [groupState, updateGroupState] = useReducer(groupStateReducer, {
+    users: [],
+    devices: [],
+  });
 
   const user = useMemo(() => {
     if (!userId) return null;
-    return users.find((user) => user.id === userId) || null;
-  }, [userId, users]);
+    return groupState.users.find((user) => user.id === userId) || null;
+  }, [userId, groupState]);
 
   const { devicesById, devicesBySlot } = useMemo(() => {
     const byId: Record<string, Device> = {};
     const bySlot: Record<number, Device> = {};
 
-    devices.forEach((device) => {
+    groupState.devices.forEach((device) => {
       byId[device.id] = device;
       bySlot[device.slot] = device;
     });
 
     return { devicesById: byId, devicesBySlot: bySlot };
-  }, [devices]);
+  }, [groupState]);
 
   const sendMessage = useCallback(
     (data: WebSocketOutgoingMessage) => {
@@ -84,8 +118,8 @@ export function useConnectionManager({
     (data: Extract<WebSocketIncomingMessage, { type: "group_state" }>) => {
       setGroupId(data.group_id);
 
-      // update users
-      setUsers(
+      // cast users to User[]
+      const users =
         data.users?.map((user) => ({
           id: user.id,
           name: user.name,
@@ -93,11 +127,10 @@ export function useConnectionManager({
           connectedDeviceIds: user.connected_device_ids,
           lastActivityTime: user.last_activity_time,
           lastPing: user.last_ping,
-        })) || []
-      );
+        })) || [];
 
-      // update devices
-      const updatedDevices =
+      // cast devices to Device[]
+      const devices =
         data.output_devices?.map((device) => {
           // assemble list of users that are connected to this device
           // then create a list of user ids or an empty list
@@ -106,11 +139,25 @@ export function useConnectionManager({
               ?.filter((user) => user.connected_device_ids.includes(device.id))
               .map((user) => user.id) || [];
 
+          const keybindPresets: Record<string, Keybind[]> = Object.fromEntries(
+            Object.entries(device.keybind_presets).map(
+              ([presetName, keybinds]) => [
+                presetName,
+                keybinds.map(
+                  ([key, event]: WebSocketMessageKeybind): Keybind => ({
+                    key: key || null,
+                    event: event || null,
+                  })
+                ),
+              ]
+            )
+          );
+
           return {
             id: device.id,
             name: device.name,
             slot: device.slot,
-            keybindPresets: device.keybind_presets,
+            keybindPresets: keybindPresets,
             allowedEvents: device.allowed_events,
             lastPing: device.last_ping,
             connectedUserIds: connectedUserIds,
@@ -145,38 +192,23 @@ export function useConnectionManager({
         return updatedSlotPresets;
       });
 
-      updatedDevices.sort((a, b) => a.slot - b.slot);
-      setDevices(updatedDevices || []);
+      devices.sort((a, b) => a.slot - b.slot);
+      updateGroupState({
+        type: "set_users_and_devices",
+        users: users,
+        devices: devices,
+      });
     },
-    [setGroupId, setUsers, setSlotPresets, setDevices]
+    [setGroupId, setSlotPresets]
   );
 
   const handleActivityAndPingUpdateMessage = useCallback(
     (
       data: Extract<WebSocketIncomingMessage, { type: "activity_and_ping" }>
     ) => {
-      // update ping and activity for users
-      setUsers((prevUsers) =>
-        prevUsers.map((user) => {
-          const updatedLastActivity = data.users?.[user.id][0];
-          const updatedPing = data.users?.[user.id][1];
-          return {
-            ...user,
-            lastActivityTime: updatedLastActivity || user.lastActivityTime,
-            lastPing: updatedPing || null,
-          };
-        })
-      );
-
-      // update ping for devices
-      setDevices((prevDevices) =>
-        prevDevices.map((device) => {
-          const updatedPing = data.output_devices?.[device.id];
-          return { ...device, lastPing: updatedPing || null };
-        })
-      );
+      updateGroupState(data);
     },
-    [setUsers, setDevices]
+    []
   );
 
   const handlePingRequestMessage = useCallback(
@@ -237,8 +269,7 @@ export function useConnectionManager({
       type: "leave_group",
     });
 
-    setUsers([]);
-    setDevices([]);
+    updateGroupState({ type: "clear" });
     setLastGroupId("");
 
     setConnectionStatus((previousStatus) => {
@@ -300,10 +331,7 @@ export function useConnectionManager({
     setUserId,
     groupId,
     setGroupId,
-    users,
-    setUsers,
-    devices,
-    setDevices,
+    groupState,
     user,
     devicesById,
     devicesBySlot,

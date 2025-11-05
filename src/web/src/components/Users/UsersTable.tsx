@@ -3,9 +3,9 @@ import { useDataContext } from "../../hooks/useDataContext";
 import UserRow from "./UserRow";
 
 export default function UserTable() {
-  const { users } = useDataContext();
+  const { groupState } = useDataContext();
 
-  if (!users || users.length === 0) {
+  if (!groupState.users || groupState.users.length === 0) {
     return (
       <div className="text-center text-muted py-3">
         No users connected
@@ -25,7 +25,7 @@ export default function UserTable() {
           </tr>
         </thead>
         <tbody>
-          {users.map((user) => (
+          {groupState.users.map((user) => (
             <UserRow key={user.id} user={user} />
           ))}
         </tbody>

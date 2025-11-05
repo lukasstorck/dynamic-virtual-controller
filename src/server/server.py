@@ -57,13 +57,13 @@ class User:
 
 
 class OutputDevice:
-    def __init__(self, id: str, websocket: fastapi.WebSocket, name: str, group_id: str, slot: int, keybind_presets: dict[str, dict[str, str]], allowed_events: set[str]):
+    def __init__(self, id: str, websocket: fastapi.WebSocket, name: str, group_id: str, slot: int, keybind_presets: dict[str, list[tuple[str, str]]], allowed_events: set[str]):
         self.id = id
         self.group_id = group_id
         self.websocket = websocket
         self.name = name or id
         self.slot = slot
-        self.keybind_presets: dict[str, dict[str, str]] = keybind_presets   # TODO: make it a dict[str, list[str, str]]
+        self.keybind_presets: dict[str, list[tuple[str, str]]] = keybind_presets
         self.allowed_events: set[str] = allowed_events
         self.pings: list[float] = []
 
@@ -94,7 +94,7 @@ class OutputClient:
             group_id: str,
             device_name: str,
             allowed_events: set[str],
-            keybind_presets: dict[str, dict[str, str]],
+            keybind_presets: dict[str, list[tuple[str, str]]],
     ):
         group = await ConnectionManager.get().get_group(group_id)
 
