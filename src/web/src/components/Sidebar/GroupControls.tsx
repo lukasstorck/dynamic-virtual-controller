@@ -54,8 +54,11 @@ export default function GroupControls() {
             variant="primary"
             className="w-100"
             onClick={() => handleJoinGroup(groupId)}
+            disabled={connectionStatus === Status.Disconnected}
           >
-            Join Group
+            {connectionStatus === Status.Disconnected
+              ? "Connecting..."
+              : "Join Group"}
           </Button>
         </div>
       ) : (
