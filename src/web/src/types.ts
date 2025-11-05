@@ -42,7 +42,7 @@ export type GroupUpdateAction =
   | {
       type: "activity_and_ping";
       users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
-      output_devices?: Record<string, number>; // TODO: rename to devices
+      devices?: Record<string, number>;
     };
 
 export const Status = {
@@ -57,12 +57,12 @@ export type WebSocketIncomingMessage =
       type: "group_state";
       group_id: string;
       users?: WebSocketMessageUser[];
-      output_devices?: WebSocketMessageDevice[];
+      devices?: WebSocketMessageDevice[];
     }
   | {
       type: "activity_and_ping";
       users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
-      output_devices?: Record<string, number>; // TODO: rename to devices
+      devices?: Record<string, number>;
     }
   | { type: "ping"; id: string };
 

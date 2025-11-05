@@ -156,7 +156,7 @@ class Group:
             'type': 'group_state',
             'group_id': self.id,
             'users': users_data,
-            'output_devices': output_devices_data,
+            'devices': output_devices_data,
         }
 
     def serialize_activity_and_ping(self):
@@ -166,7 +166,7 @@ class Group:
         return {
             'type': 'activity_and_ping',
             'users': users,
-            'output_devices': output_devices,
+            'devices': output_devices,
         }
 
     async def broadcast(self, message: str, receivers: list[User | OutputDevice] = None):

@@ -33,8 +33,8 @@ function groupStateReducer(state: GroupState, action: GroupUpdateAction) {
         }
       });
       state.devices.forEach((device, index) => {
-        if (action.output_devices && device.id in action.output_devices) {
-          const updatedPing = action.output_devices?.[device.id];
+        if (action.devices && device.id in action.devices) {
+          const updatedPing = action.devices?.[device.id];
 
           state.devices[index].lastPing = updatedPing || null;
         }
@@ -131,7 +131,7 @@ export function useConnectionManager({
 
       // cast devices to Device[]
       const devices =
-        data.output_devices?.map((device) => {
+        data.devices?.map((device) => {
           // assemble list of users that are connected to this device
           // then create a list of user ids or an empty list
           const connectedUserIds =
@@ -168,7 +168,7 @@ export function useConnectionManager({
       setSlotPresets((prevSlotPresets) => {
         const updatedSlotPresets = { ...prevSlotPresets };
 
-        data.output_devices?.forEach((device) => {
+        data.devices?.forEach((device) => {
           if (device.slot in updatedSlotPresets) {
             if (
               updatedSlotPresets[device.slot] !== "None" &&
