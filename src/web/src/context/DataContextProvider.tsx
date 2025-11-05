@@ -70,8 +70,6 @@ export default function DataContextProvider({
     });
   }, [connectionStatus, userName, userColor, sendMessage]);
 
-  // TODO: add keybind editor modal and behavior
-
   useEffect(() => {
     // read group id from url paramters and clean up url
     const url = new URL(window.location.href);
@@ -107,8 +105,6 @@ export default function DataContextProvider({
     // Preset keybinds
     user.connectedDeviceIds.forEach((deviceId) => {
       const device = devicesById[deviceId];
-      // TODO: get selected preset from slotPreset variable slotPreset[device.slot]
-      // TODO: when devices are loaded or updated, ensure that the stored preset name in slotPreset is present for that slot
 
       // skip keybind if device is not present
       if (!device) return;

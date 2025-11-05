@@ -15,7 +15,7 @@ export interface DataContextType {
   groupId: string;
   setGroupId: React.Dispatch<React.SetStateAction<string>>;
 
-  userId: string | null; // TODO: check if needed
+  userId: string | null;
   setUserId: React.Dispatch<React.SetStateAction<string | null>>;
 
   userColor: string;
