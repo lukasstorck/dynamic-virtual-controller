@@ -1,5 +1,5 @@
 import { useMemo, useState, type FC } from "react";
-import { Card, Form, Button, Badge, FormControl } from "react-bootstrap";
+import { Card, Button, Badge, FormControl } from "react-bootstrap";
 import { type Device } from "../../types";
 import { formatPing } from "../../utils/formatting";
 import { useDataContext } from "../../hooks/useDataContext";
@@ -66,7 +66,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
       <Card.Body>
         {/* Device Name */}
         <div className="d-flex align-items-center gap-2 mb-2">
-          <Form onSubmit={(event) => event.preventDefault()} className="w-100">
+          <div className="w-100">
             <FormControl
               className="fw-bold mb-0 flex-grow-1 text-truncate border-0 p-0"
               type="text"
@@ -75,7 +75,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
                 setModifiedDeviceName(event.target.value);
               }}
             />
-          </Form>
+          </div>
           <Button
             variant="outline-success"
             className={
