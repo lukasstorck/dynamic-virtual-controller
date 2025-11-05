@@ -34,10 +34,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
     if (["button", "input", "select", "option"].includes(clickedDOMTagName))
       return;
 
-    handleSelectOutput(
-      deviceId,
-      !user?.connectedDeviceIds.includes(deviceId)
-    );
+    handleSelectOutput(deviceId, !user?.connectedDeviceIds.includes(deviceId));
   };
 
   const userIsConnectedToDevice = useMemo(
