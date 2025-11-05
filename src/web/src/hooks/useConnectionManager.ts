@@ -48,8 +48,14 @@ export function useConnectionManager({
 
       if (lastGroupId) handleJoinGroup(lastGroupId);
     },
-    onClose: (_) => setConnectionStatus(Status.Disconnected),
+    onClose: (_) => {
+      setConnectionStatus(Status.Disconnected);
+
+      setUsers([]);
+      setDevices([]);
+    },
     onMessage: (event) => handleWebSocketMessage(event),
+    shouldReconnect: (_) => true,
   });
 
   const [connectionStatus, setConnectionStatus] = useState(Status.Disconnected);
