@@ -1,9 +1,7 @@
 import asyncio
 import contextlib
 import fastapi
-import fastapi.staticfiles
 import json
-import pathlib
 import time
 import uuid
 
@@ -297,21 +295,6 @@ async def lifespan(app: fastapi.FastAPI):
             await task
 
 app = fastapi.FastAPI(lifespan=lifespan)
-
-# === Static Files ===
-static_dir = pathlib.Path(__file__).parent / 'static'
-static_dir.mkdir(exist_ok=True)
-app.mount('/static', fastapi.staticfiles.StaticFiles(directory=static_dir), name='static')
-
-
-@app.get('/')
-async def index():
-    return fastapi.responses.FileResponse(static_dir / 'index.html')
-
-
-@app.get('/favicon.ico')
-async def favicon():
-    return fastapi.responses.FileResponse(static_dir / 'favicon.ico')
 
 
 # === User WebSocket ===
