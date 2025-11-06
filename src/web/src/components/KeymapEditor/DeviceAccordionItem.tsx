@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import { Row, Col, Form, Accordion, Dropdown } from "react-bootstrap";
+import {
+  Row,
+  Col,
+  Form,
+  Dropdown,
+  Accordion,
+  AccordionButton,
+} from "react-bootstrap";
 import { useDataContext } from "../../hooks/useDataContext";
 import type { Device } from "../../types";
 import KeybindRow from "./KeybindRow";
@@ -38,26 +45,31 @@ export default function DeviceAccordionItem({
 
   return (
     <Accordion.Item eventKey={eventKey}>
-      <Accordion.Header>
-        <Row className="w-100 align-items-center">
+      <div className="bg-light p-3">
+        <Row className="w-100 align-items-center justify-content-between gx-2">
           <Col xs={4} className="fw-semibold">
             Slot {device.slot}: {device.name}
           </Col>
-          <Col xs={2} className="text-muted small">
-            Type: <span className="fw-normal">Unknown</span>
+
+          <Col xs={2}>
+            <Form.Check type="switch" reverse>
+              <Form.Check.Label>enabled:</Form.Check.Label>
+              <Form.Check.Input
+                checked={sendKeybinds}
+                onChange={(event) =>
+                  handleSelectOutput(device.id, event.target.checked)
+                }
+                style={{
+                  ...(sendKeybinds && {
+                    backgroundColor: userColor,
+                    borderColor: userColor,
+                  }),
+                }}
+              />
+            </Form.Check>
           </Col>
-          <Col xs={3}>
-            <Form.Check
-              onChange={(event) =>
-                handleSelectOutput(device.id, event.target.checked)
-              }
-              type="checkbox"
-              label="Send Keybinds"
-              checked={sendKeybinds}
-              style={{ color: userColor }}
-            />
-          </Col>
-          <Col xs={3}>
+
+          <Col xs={2} className="d-flex justify-content-center">
             <Dropdown
               onSelect={(value) =>
                 handleSelectKeybindPreset(device.slot, value || "None")
@@ -75,8 +87,12 @@ export default function DeviceAccordionItem({
               </Dropdown.Menu>
             </Dropdown>
           </Col>
+
+          <Col xs={"auto"}>
+            <AccordionButton className="w-auto p-0 bg-light shadow-none" />
+          </Col>
         </Row>
-      </Accordion.Header>
+      </div>
 
       <Accordion.Body>
         {selectedPresetKeybinds.length > 0 ? (
