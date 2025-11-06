@@ -24,6 +24,46 @@ export default function CustomKeybinds() {
     );
   };
 
+  const handleEditKey = (index: number, newKey: string) => {
+    setCustomKeybinds((previousKeybinds) =>
+      previousKeybinds.map((keybind, i) =>
+        i === index ? { ...keybind, key: newKey } : keybind
+      )
+    );
+  };
+
+  const handleEditSlot = (index: number, newSlot: number) => {
+    // TODO: cant unset slot, so only show option "select devie..." when nothing else is available or nothing was yet selected or set any value by default
+
+    // check if slot is valid
+    console.log(index, newSlot, devicesBySlot, newSlot in devicesBySlot);
+    if (newSlot === null || !(newSlot in devicesBySlot)) return;
+
+    // TODO: check if any event is available an set it instead of null, or set a placeholder for events
+    setCustomKeybinds((previousKeybinds) =>
+      previousKeybinds.map((keybind, i) =>
+        i === index ? { ...keybind, slot: newSlot, event: null } : keybind
+      )
+    );
+  };
+
+  const handleEditEvent = (index: number, newEvent: string) => {
+    // check if device slot is set
+    const slot = customKeybinds[index].slot;
+    if (slot == null) return;
+
+    const device = devicesBySlot[slot];
+
+    // check if event is allowed for selected device
+    if (!device || !device.allowedEvents.includes(newEvent)) return;
+
+    setCustomKeybinds((previousKeybinds) =>
+      previousKeybinds.map((keybind, i) =>
+        i === index ? { ...keybind, event: newEvent } : keybind
+      )
+    );
+  };
+
   const handleToggleActive = (index: number) => {
     setCustomKeybinds((previousKeybinds) =>
       previousKeybinds.map((keybind, i) =>
@@ -53,14 +93,10 @@ export default function CustomKeybinds() {
         </Button>
       </div>
 
-      {/* Container for rows */}
+      {/* Table Container */}
       <div
         className="border rounded overflow-auto"
-        style={{
-          maxWidth: "100%",
-          overflowX: "auto",
-          minHeight: "3rem",
-        }}
+        style={{ maxWidth: "100%", overflowX: "auto", minHeight: "3rem" }}
       >
         {/* Header Row */}
         <Row className="fw-semibold text-muted border-bottom py-2 mx-0 bg-light">
@@ -70,10 +106,10 @@ export default function CustomKeybinds() {
           <Col md={3} className="px-2">
             Device
           </Col>
-          <Col md={3} className="px-2">
+          <Col md={4} className="px-2">
             Target Event
           </Col>
-          <Col md={2} className="px-2">
+          <Col md={1} className="px-2">
             Enabled
           </Col>
           <Col md={1} className="px-2"></Col>
@@ -93,12 +129,15 @@ export default function CustomKeybinds() {
               devicesBySlot={devicesBySlot}
               onToggleActive={handleToggleActive}
               onRemove={handleRemove}
+              onEditKey={handleEditKey}
+              onEditSlot={handleEditSlot}
+              onEditEvent={handleEditEvent}
             />
           ))
         )}
       </div>
 
-      {/* Bottom Add Button */}
+      {/* Add New Keybind Button */}
       <div className="text-center mt-3">
         <Button variant="outline-success" onClick={handleAdd}>
           <span
