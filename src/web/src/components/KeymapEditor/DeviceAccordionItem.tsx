@@ -71,6 +71,7 @@ export default function DeviceAccordionItem({
           </Col>
 
           <Col xs={2} className="d-flex justify-content-center">
+            {/* TODO: use select / options instead of buttons / a-tags */}
             <Dropdown
               onClick={() => (document.activeElement as HTMLElement)?.blur()}
               onSelect={(value) => {

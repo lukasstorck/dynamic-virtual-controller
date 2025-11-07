@@ -10,7 +10,7 @@ export default function CustomKeybinds() {
   const handleAdd = () => {
     const newKeybind: CustomKeybind = {
       key: null,
-      event: null,
+      event: null,    // TODO: first option is displayed, but interenally is still null, which creates a not working keybind
       slot: null,
       active: true,
     };
@@ -36,7 +36,6 @@ export default function CustomKeybinds() {
     // TODO: cant unset slot, so only show option "select devie..." when nothing else is available or nothing was yet selected or set any value by default
 
     // check if slot is valid
-    console.log(index, newSlot, devicesBySlot, newSlot in devicesBySlot);
     if (newSlot === null || !(newSlot in devicesBySlot)) return;
 
     // TODO: check if any event is available an set it instead of null, or set a placeholder for events
