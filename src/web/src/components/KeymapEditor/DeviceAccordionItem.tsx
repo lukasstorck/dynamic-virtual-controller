@@ -1,12 +1,5 @@
 import { useMemo } from "react";
-import {
-  Row,
-  Col,
-  Form,
-  Dropdown,
-  Accordion,
-  AccordionButton,
-} from "react-bootstrap";
+import { Row, Col, Form, Accordion, AccordionButton } from "react-bootstrap";
 import { useDataContext } from "../../hooks/useDataContext";
 import type { Device } from "../../types";
 import KeybindRow from "./KeybindRow";
@@ -70,25 +63,26 @@ export default function DeviceAccordionItem({
             </Form.Check>
           </Col>
 
-          <Col xs={2} className="d-flex justify-content-center">
-            {/* TODO: use select / options instead of buttons / a-tags */}
-            <Dropdown
-              onClick={() => (document.activeElement as HTMLElement)?.blur()}
-              onSelect={(value) => {
+          <Col
+            xs={3}
+            className="d-flex justify-content-center align-items-center"
+          >
+            <span className="me-1">Preset:</span>
+            <Form.Select
+              size="sm"
+              value={selectedPresetName}
+              onChange={(event) => {
+                event.target.blur();
+                const value = event.target.value;
                 handleSelectKeybindPreset(device.slot, value || "None");
               }}
             >
-              <Dropdown.Toggle size="sm" variant="outline-secondary">
-                Preset: {selectedPresetName}
-              </Dropdown.Toggle>
-              <Dropdown.Menu>
-                {keybindPresetOptions.map((preset) => (
-                  <Dropdown.Item key={preset} eventKey={preset}>
-                    {preset}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown.Menu>
-            </Dropdown>
+              {keybindPresetOptions.map((preset) => (
+                <option key={preset} value={preset}>
+                  {preset}
+                </option>
+              ))}
+            </Form.Select>
           </Col>
 
           <Col xs={"auto"}>
