@@ -83,21 +83,13 @@ export default function CustomKeybinds() {
           onClick={handleAdd}
           className="d-flex align-items-center"
         >
-          <span
-            className="material-symbols-outlined me-1"
-            style={{ fontSize: "16px" }}
-          >
-            add
-          </span>
+          <span className="material-symbols-outlined me-1 fs-5">add</span>
           Add Keybind
         </Button>
       </div>
 
       {/* Table Container */}
-      <div
-        className="border rounded overflow-auto"
-        style={{ maxWidth: "100%", overflowX: "auto", minHeight: "3rem" }}
-      >
+      <div className="border rounded overflow-auto">
         {/* Header Row */}
         <Row className="fw-semibold text-muted border-bottom py-2 mx-0 bg-light">
           <Col md={3} className="px-2">
@@ -138,15 +130,15 @@ export default function CustomKeybinds() {
       </div>
 
       {/* Add New Keybind Button */}
-      <div className="text-center mt-3">
-        <Button variant="outline-success" onClick={handleAdd}>
-          <span
-            className="material-symbols-outlined me-1 align-middle"
-            style={{ fontSize: "16px" }}
-          >
-            add
-          </span>
-          Add New Keybind
+      <div className="d-flex justify-content-center mt-3">
+        <Button
+          variant="success"
+          size="sm"
+          onClick={handleAdd}
+          className="d-flex align-items-center"
+        >
+          <span className="material-symbols-outlined me-1 fs-5">add</span>
+          Add Keybind
         </Button>
       </div>
     </div>

@@ -29,7 +29,6 @@ export default function UserConfiguration() {
           value={userColor}
           title="Choose your color"
           onChange={(event) => setUserColor(event.target.value)}
-          style={{ height: "38px" }}
         />
       </Form.Group>
 
@@ -38,12 +37,7 @@ export default function UserConfiguration() {
         className="w-100 d-flex justify-content-center align-items-center"
         onClick={() => setShowKeybindEditor(true)}
       >
-        <span
-          className="material-symbols-outlined me-1 fs-5"
-          style={{ fontSize: "16px" }}
-        >
-          edit
-        </span>
+        <span className="material-symbols-outlined me-1 fs-5">edit</span>
         Edit Keybinds
       </Button>
     </div>

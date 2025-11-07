@@ -19,7 +19,7 @@ export default function KeybindEditor() {
         <Modal.Title>Keybind Editor</Modal.Title>
       </Modal.Header>
 
-      <Modal.Body style={{ maxHeight: "80vh", overflowY: "auto" }}>
+      <Modal.Body>
         <DeviceOverview />
         <CustomKeybinds />
       </Modal.Body>

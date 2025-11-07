@@ -94,10 +94,7 @@ export default function CustomKeybindRow({
   };
 
   return (
-    <Row
-      className="align-items-center gx-2 border-bottom py-2 mx-0"
-      style={{ fontSize: "0.9rem", overflow: "hidden" }}
-    >
+    <Row className="align-items-center gx-2 border-bottom py-2 mx-0 overflow-hidden">
       {/* Key selection */}
       <Col xs={12} md={3} className="px-2">
         <Button
@@ -154,9 +151,7 @@ export default function CustomKeybindRow({
           onClick={() => onRemove(index)}
           className="d-flex align-items-center p-2"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>
-            delete
-          </span>
+          <span className="material-symbols-outlined fs-6">delete</span>
         </Button>
       </Col>
     </Row>
