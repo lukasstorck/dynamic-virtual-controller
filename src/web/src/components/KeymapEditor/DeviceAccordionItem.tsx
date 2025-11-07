@@ -87,7 +87,7 @@ export default function DeviceAccordionItem({
 
           <Col xs={"auto"}>
             <AccordionButton
-              onClick={() => (document.activeElement as HTMLElement)?.blur()}
+              onClick={(event) => event.currentTarget.blur()}
               className="w-auto p-0 bg-light shadow-none"
             />
           </Col>
