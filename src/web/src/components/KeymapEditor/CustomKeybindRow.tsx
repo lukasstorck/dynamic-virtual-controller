@@ -141,7 +141,7 @@ export default function CustomKeybindRow({
       {/* Remove Keybind Button */}
       <Col xs={6} md={1} className="text-end px-2">
         <Button
-          variant="outline-danger"
+          variant="danger"
           size="sm"
           onClick={(event) => {
             event.currentTarget.blur();
