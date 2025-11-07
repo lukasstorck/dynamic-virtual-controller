@@ -10,7 +10,7 @@ export default function CustomKeybinds() {
   const handleAdd = () => {
     const newKeybind: CustomKeybind = {
       key: null,
-      event: null,    // TODO: first option is displayed, but interenally is still null, which creates a not working keybind
+      event: null,
       slot: null,
       active: true,
     };
@@ -32,18 +32,34 @@ export default function CustomKeybinds() {
     );
   };
 
-  const handleEditSlot = (index: number, newSlot: number) => {
-    // TODO: cant unset slot, so only show option "select devie..." when nothing else is available or nothing was yet selected or set any value by default
+  const handleEditSlot = (index: number, newSlot: number | null) => {
+    // reset slot and event if new slot is null
+    if (newSlot === null) {
+      setCustomKeybinds((previousKeybinds) =>
+        previousKeybinds.map((keybind, i) =>
+          i === index ? { ...keybind, slot: null, event: null } : keybind
+        )
+      );
+      return;
+    }
 
     // check if slot is valid
-    if (newSlot === null || !(newSlot in devicesBySlot)) return;
+    if (!(newSlot in devicesBySlot)) return;
 
-    // TODO: check if any event is available an set it instead of null, or set a placeholder for events
-    setCustomKeybinds((previousKeybinds) =>
-      previousKeybinds.map((keybind, i) =>
-        i === index ? { ...keybind, slot: newSlot, event: null } : keybind
-      )
-    );
+    // if the previous event exists on the new device, keep it; otherwise null
+    setCustomKeybinds((previousKeybinds) => {
+      const newDevice = devicesBySlot[newSlot];
+      const previousEvent = previousKeybinds[index]?.event;
+
+      return previousKeybinds.map((keybind, i) => {
+        if (i !== index) return keybind;
+        const updatedEvent =
+          previousEvent && newDevice.allowedEvents.includes(previousEvent)
+            ? previousEvent
+            : null;
+        return { ...keybind, slot: newSlot, event: updatedEvent };
+      });
+    });
   };
 
   const handleEditEvent = (index: number, newEvent: string) => {

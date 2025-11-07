@@ -11,7 +11,7 @@ interface CustomKeybindRowProps {
   onToggleActive: (index: number) => void;
   onRemove: (index: number) => void;
   onEditKey: (index: number, newKey: string) => void;
-  onEditSlot: (index: number, newSlot: number) => void;
+  onEditSlot: (index: number, newSlot: number | null) => void;
   onEditEvent: (index: number, newEvent: string) => void;
 }
 
@@ -60,24 +60,23 @@ export default function CustomKeybindRow({
       ? devicesBySlot[keybind.slot]
       : null;
 
-  const eventOptions = currentDevice
-    ? currentDevice.allowedEvents.map((evt) => (
-        <option key={evt} value={evt}>
-          {evt}
-        </option>
-      ))
-    : [
-        <option key="none" value="">
-          Select device first
-        </option>,
-      ];
+  const eventOptions = [
+    ...(currentDevice
+      ? currentDevice.allowedEvents.map((evt) => (
+          <option key={evt} value={evt}>
+            {evt}
+          </option>
+        ))
+      : []),
+  ];
 
   const handleStartListening = () => {
     setCustomKeybindActiveListener(index);
   };
 
   const handleSlotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const slotNum = Number(e.target.value);
+    const value = e.target.value;
+    const slotNum = value === "" ? null : Number(value);
     onEditSlot(index, slotNum);
   };
 
@@ -97,7 +96,7 @@ export default function CustomKeybindRow({
           onClick={handleStartListening}
           data-keylistener={index}
         >
-          {listening ? "Press any key..." : keybind.key || "Set Key"}
+          {listening ? "Press any key..." : keybind.key || "!! Set Key !!"}
         </Button>
       </Col>
 
@@ -121,6 +120,7 @@ export default function CustomKeybindRow({
           onChange={handleEventChange}
           disabled={!currentDevice}
         >
+          <option value="">Select event...</option>
           {eventOptions}
         </Form.Select>
       </Col>
