@@ -33,7 +33,6 @@ export interface DataContextType {
   handleLeaveGroup: React.Dispatch<void>; // TODO: fix typing
   handleRenameOutput: (deviceId: string, newName: string) => void;
   handleSelectOutput: (deviceId: string, state: boolean) => void;
-  handleKeyPress: (event: KeyboardEvent, state: number) => void;
   handleSelectKeybindPreset: (deviceSlot: number, presetName: string) => void;
 
   usersById: Record<string, User>;

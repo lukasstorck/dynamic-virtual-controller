@@ -173,6 +173,22 @@ export default function DataContextProvider({
     [connectionStatus, activeKeybinds, sendMessage]
   );
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      handleKeyPress(event, 1);
+    };
+    const handleKeyUp = (event: KeyboardEvent) => {
+      handleKeyPress(event, 0);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [handleKeyPress]);
+
   return (
     <DataContext
       value={{
@@ -197,7 +213,6 @@ export default function DataContextProvider({
         handleLeaveGroup,
         handleRenameOutput,
         handleSelectOutput,
-        handleKeyPress,
         usersById,
         devicesById,
         devicesBySlot,
