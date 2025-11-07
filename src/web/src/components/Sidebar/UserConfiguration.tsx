@@ -35,7 +35,10 @@ export default function UserConfiguration() {
       <Button
         variant="outline-primary"
         className="w-100 d-flex justify-content-center align-items-center"
-        onClick={() => setShowKeybindEditor(true)}
+        onClick={(event) => {
+          event.currentTarget.blur();
+          setShowKeybindEditor(true);
+        }}
       >
         <span className="material-symbols-outlined me-1 fs-5">edit</span>
         Edit Keybinds

@@ -40,6 +40,11 @@ export interface DataContextType {
   devicesBySlot: Record<number, Device>;
   showKeybindEditor: boolean;
   setShowKeybindEditor: (newState: boolean) => void;
+
+  customKeybindActiveListener: number | null;
+  setCustomKeybindActiveListener: React.Dispatch<
+    React.SetStateAction<number | null>
+  >;
 }
 
 export const DataContext = createContext<DataContextType | undefined>(

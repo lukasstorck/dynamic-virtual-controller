@@ -17,6 +17,8 @@ export default function DataContextProvider({
   children: ReactNode;
 }) {
   const [showKeybindEditor, setShowKeybindEditor] = useState(false);
+  const [customKeybindActiveListener, setCustomKeybindActiveListener] =
+    useState<number | null>(null);
 
   // load user name, color, slot presets and
   // custom keybinds from local storage
@@ -151,8 +153,7 @@ export default function DataContextProvider({
       // only capture and send keys when connected
       if (connectionStatus !== Status.JoinedGroup) return;
 
-      // do not capture key events when editing device name
-      // TODO: also deny on active modal
+      // do not capture key events e.g. when editing device name
       const clickedDOMTagName = (
         event.target as HTMLElement
       ).tagName.toLowerCase();
@@ -218,6 +219,8 @@ export default function DataContextProvider({
         devicesBySlot,
         showKeybindEditor,
         setShowKeybindEditor,
+        customKeybindActiveListener,
+        setCustomKeybindActiveListener,
       }}
     >
       {children}

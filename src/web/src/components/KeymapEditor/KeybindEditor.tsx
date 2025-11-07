@@ -8,12 +8,12 @@ export default function KeybindEditor() {
   const { showKeybindEditor, setShowKeybindEditor } = useDataContext();
 
   return (
-    // TODO: add functionality
-    // TODO: ensure that keypresses are not active during open modal
     <Modal
       show={showKeybindEditor}
       size="xl"
-      onHide={() => setShowKeybindEditor(false)}
+      onHide={() => {
+        setShowKeybindEditor(false);
+      }}
     >
       <Modal.Header closeButton>
         <Modal.Title>Keybind Editor</Modal.Title>

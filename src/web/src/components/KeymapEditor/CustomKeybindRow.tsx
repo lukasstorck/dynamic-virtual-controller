@@ -1,7 +1,8 @@
 // CustomKeybindRow.tsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import { Row, Col, Button, Form } from "react-bootstrap";
 import type { CustomKeybind, Device } from "../../types";
+import { useDataContext } from "../../hooks/useDataContext";
 
 interface CustomKeybindRowProps {
   keybind: CustomKeybind;
@@ -14,9 +15,6 @@ interface CustomKeybindRowProps {
   onEditEvent: (index: number, newEvent: string) => void;
 }
 
-// module-level singleton for listening
-let activeKeyListener: number | null = null;
-
 export default function CustomKeybindRow({
   keybind,
   index,
@@ -27,21 +25,28 @@ export default function CustomKeybindRow({
   onEditSlot,
   onEditEvent,
 }: CustomKeybindRowProps) {
-  const [listening, setListening] = useState(false);
+  const { customKeybindActiveListener, setCustomKeybindActiveListener } =
+    useDataContext();
 
-  // Attach / detach key listener dynamically
+  const listening = useMemo(
+    () => index === customKeybindActiveListener,
+    [customKeybindActiveListener]
+  );
+
   useEffect(() => {
     if (!listening) return;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      e.preventDefault();
-      onEditKey(index, e.code);
-      setListening(false);
-      activeKeyListener = null;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      onEditKey(index, event.code);
+
+      setCustomKeybindActiveListener(null);
+      (document.activeElement as HTMLElement)?.blur();
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [listening, index, onEditKey]);
 
   const deviceOptions = Object.values(devicesBySlot).map((device) => (
@@ -68,19 +73,7 @@ export default function CustomKeybindRow({
       ];
 
   const handleStartListening = () => {
-    // TODO: other listeners are not stopped, at least button is still yellow
-    // TODO: check that there are no bugs with button presses propagating like Esc, or a selected key directly being sent to a device
-
-    // stop any other active listeners
-    if (activeKeyListener !== null && activeKeyListener !== index) {
-      const previousButton = document.querySelector(
-        `[data-keylistener="${activeKeyListener}"]`
-      ) as HTMLButtonElement | null;
-      if (previousButton) previousButton.blur();
-    }
-
-    activeKeyListener = index;
-    setListening(true);
+    setCustomKeybindActiveListener(index);
   };
 
   const handleSlotChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -133,22 +126,27 @@ export default function CustomKeybindRow({
       </Col>
 
       {/* Active switch */}
-      {/* TODO: UX user might think that toggle means it is also sent to the device, but that is different */}
       <Col xs={6} md={1} className="px-2">
         <Form.Check
           type="switch"
           id={`active-switch-${index}`}
           checked={keybind.active}
-          onChange={() => onToggleActive(index)}
+          onChange={(event) => {
+            event.target.blur();
+            onToggleActive(index);
+          }}
         />
       </Col>
 
-      {/* Remove */}
+      {/* Remove Keybind Button */}
       <Col xs={6} md={1} className="text-end px-2">
         <Button
           variant="outline-danger"
           size="sm"
-          onClick={() => onRemove(index)}
+          onClick={(event) => {
+            event.currentTarget.blur();
+            onRemove(index);
+          }}
           className="d-flex align-items-center p-2"
         >
           <span className="material-symbols-outlined fs-6">delete</span>

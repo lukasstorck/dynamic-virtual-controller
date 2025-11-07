@@ -56,9 +56,10 @@ export default function DeviceAccordionItem({
               <Form.Check.Label>enabled:</Form.Check.Label>
               <Form.Check.Input
                 checked={sendKeybinds}
-                onChange={(event) =>
-                  handleSelectOutput(device.id, event.target.checked)
-                }
+                onChange={(event) => {
+                  event.target.blur();
+                  handleSelectOutput(device.id, event.target.checked);
+                }}
                 style={{
                   ...(sendKeybinds && {
                     backgroundColor: userColor,
@@ -71,9 +72,10 @@ export default function DeviceAccordionItem({
 
           <Col xs={2} className="d-flex justify-content-center">
             <Dropdown
-              onSelect={(value) =>
-                handleSelectKeybindPreset(device.slot, value || "None")
-              }
+              onClick={() => (document.activeElement as HTMLElement)?.blur()}
+              onSelect={(value) => {
+                handleSelectKeybindPreset(device.slot, value || "None");
+              }}
             >
               <Dropdown.Toggle size="sm" variant="outline-secondary">
                 Preset: {selectedPresetName}
@@ -89,7 +91,10 @@ export default function DeviceAccordionItem({
           </Col>
 
           <Col xs={"auto"}>
-            <AccordionButton className="w-auto p-0 bg-light shadow-none" />
+            <AccordionButton
+              onClick={() => (document.activeElement as HTMLElement)?.blur()}
+              className="w-auto p-0 bg-light shadow-none"
+            />
           </Col>
         </Row>
       </div>
