@@ -138,6 +138,15 @@ export default function DataContextProvider({
         keybind.slot === null
       )
         return;
+
+      // Browser pseudo-device
+      if (keybind.slot === -1) {
+        if (!map[keybind.key]) map[keybind.key] = [];
+        map[keybind.key].push(["BROWSER", keybind.event]);
+        return;
+      }
+
+      // Real devices
       const device = devicesBySlot[keybind.slot];
       if (!device || !user.connectedDeviceIds.includes(device.id)) return;
 
@@ -162,7 +171,71 @@ export default function DataContextProvider({
       const keyMappings = activeKeybinds[event.code];
       if (!keyMappings || keyMappings.length === 0) return;
 
+      // TODO: browser events are not direcly shown when browser is selected (after previously being null), but only after a device is selected
       keyMappings.forEach(([deviceId, buttonCode]) => {
+        // Browser pseudo-device
+        if (deviceId === "BROWSER") {
+          if (state === 0) return;
+
+          const allSlots = Object.keys(devicesBySlot)
+            .map(Number)
+            .sort((a, b) => a - b);
+
+          const devicesBySlotArray = allSlots.map(
+            (slot) => devicesBySlot[slot]
+          );
+
+          if (buttonCode.startsWith("Switch to Slot ")) {
+            const targetSlot = Number(
+              buttonCode.replace("Switch to Slot ", "")
+            );
+            devicesBySlotArray.forEach((device) => {
+              const state = device.slot === targetSlot;
+              handleSelectOutput(device.id, state);
+            });
+          } else if (buttonCode.startsWith("Toggle Slot ")) {
+            const targetSlot = Number(buttonCode.replace("Toggle Slot ", ""));
+            const device = devicesBySlot[targetSlot];
+            if (device) {
+              const isActive =
+                user?.connectedDeviceIds.includes(device.id) ?? false;
+              handleSelectOutput(device.id, !isActive);
+            }
+          } else if (buttonCode === "Switch to next Slot") {
+            const activeSlots = devicesBySlotArray.filter((d) =>
+              user?.connectedDeviceIds.includes(d.id)
+            );
+            const currentSlot =
+              activeSlots.length > 0
+                ? Math.min(...activeSlots.map((d) => d.slot))
+                : allSlots[allSlots.length - 1];
+            const nextSlot =
+              allSlots.find((s) => s > currentSlot) ?? allSlots[0];
+
+            devicesBySlotArray.forEach((device) =>
+              handleSelectOutput(device.id, device.slot === nextSlot)
+            );
+          } else if (buttonCode === "Switch to previous Slot") {
+            const activeSlots = devicesBySlotArray.filter((d) =>
+              user?.connectedDeviceIds.includes(d.id)
+            );
+            const currentSlot =
+              activeSlots.length > 0
+                ? Math.max(...activeSlots.map((d) => d.slot))
+                : allSlots[0];
+            const prevSlot =
+              [...allSlots].reverse().find((s) => s < currentSlot) ??
+              allSlots[allSlots.length - 1];
+
+            devicesBySlotArray.forEach((device) =>
+              handleSelectOutput(device.id, device.slot === prevSlot)
+            );
+          }
+
+          return;
+        }
+
+        // Real device keypress
         sendMessage({
           type: "keypress",
           device_id: deviceId,
@@ -171,7 +244,14 @@ export default function DataContextProvider({
         });
       });
     },
-    [connectionStatus, activeKeybinds, sendMessage]
+    [
+      connectionStatus,
+      activeKeybinds,
+      devicesBySlot,
+      slotPresets,
+      sendMessage,
+      setSlotPresets,
+    ]
   );
 
   useEffect(() => {

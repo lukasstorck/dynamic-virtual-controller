@@ -1,13 +1,12 @@
 // CustomKeybindRow.tsx
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, type JSX } from "react";
 import { Row, Col, Button, Form } from "react-bootstrap";
-import type { CustomKeybind, Device } from "../../types";
+import type { CustomKeybind } from "../../types";
 import { useDataContext } from "../../hooks/useDataContext";
 
 interface CustomKeybindRowProps {
   keybind: CustomKeybind;
   index: number;
-  devicesBySlot: Record<number, Device>;
   onToggleActive: (index: number) => void;
   onRemove: (index: number) => void;
   onEditKey: (index: number, newKey: string) => void;
@@ -18,15 +17,17 @@ interface CustomKeybindRowProps {
 export default function CustomKeybindRow({
   keybind,
   index,
-  devicesBySlot,
   onToggleActive,
   onRemove,
   onEditKey,
   onEditSlot,
   onEditEvent,
 }: CustomKeybindRowProps) {
-  const { customKeybindActiveListener, setCustomKeybindActiveListener } =
-    useDataContext();
+  const {
+    customKeybindActiveListener,
+    setCustomKeybindActiveListener,
+    devicesBySlot,
+  } = useDataContext();
 
   const listening = useMemo(
     () => index === customKeybindActiveListener,
@@ -49,26 +50,70 @@ export default function CustomKeybindRow({
     return () => window.removeEventListener("keydown", handleKeyDown, true);
   }, [listening, index, onEditKey]);
 
-  const deviceOptions = Object.values(devicesBySlot).map((device) => (
-    <option key={device.slot} value={device.slot}>
-      {`${device.slot}: ${device.name}`}
-    </option>
-  ));
+  const deviceOptions = [
+    <option key="-1" value={-1}>
+      Browser
+    </option>,
+    ...Object.values(devicesBySlot).map((device) => (
+      <option key={device.slot} value={device.slot}>
+        {`${device.slot}: ${device.name}`}
+      </option>
+    )),
+  ];
 
+  const isBrowserSelected = keybind.slot === -1;
   const currentDevice =
-    keybind.slot !== null && devicesBySlot[keybind.slot]
+    keybind.slot !== null && !isBrowserSelected && devicesBySlot[keybind.slot]
       ? devicesBySlot[keybind.slot]
       : null;
 
-  const eventOptions = [
-    ...(currentDevice
-      ? currentDevice.allowedEvents.map((evt) => (
+  const eventOptions = useMemo(() => {
+    const options: JSX.Element[] = [];
+
+    if (isBrowserSelected) {
+      // Browser pseudo-device events
+      const slotNumbers = Object.keys(devicesBySlot)
+        .map((n) => Number(n))
+        .sort((a, b) => a - b);
+
+      slotNumbers.forEach((slot) => {
+        options.push(
+          <option key={`switch-${slot}`} value={`Switch to Slot ${slot}`}>
+            Switch to Slot {slot}
+          </option>
+        );
+      });
+
+      slotNumbers.forEach((slot) => {
+        options.push(
+          <option key={`toggle-${slot}`} value={`Toggle Slot ${slot}`}>
+            Toggle Slot {slot}
+          </option>
+        );
+      });
+
+      options.push(
+        <option key="switch-previous" value="Switch to previous Slot">
+          Switch to previous Slot
+        </option>
+      );
+      options.push(
+        <option key="switch-next" value="Switch to next Slot">
+          Switch to next Slot
+        </option>
+      );
+    } else if (currentDevice) {
+      currentDevice.allowedEvents.forEach((evt) =>
+        options.push(
           <option key={evt} value={evt}>
             {evt}
           </option>
-        ))
-      : []),
-  ];
+        )
+      );
+    }
+
+    return options;
+  }, [index, devicesBySlot, currentDevice]);
 
   const handleStartListening = () => {
     setCustomKeybindActiveListener(index);
@@ -118,7 +163,7 @@ export default function CustomKeybindRow({
           size="sm"
           value={keybind.event ?? ""}
           onChange={handleEventChange}
-          disabled={!currentDevice}
+          disabled={!currentDevice && !isBrowserSelected}
         >
           <option value="">Select event...</option>
           {eventOptions}

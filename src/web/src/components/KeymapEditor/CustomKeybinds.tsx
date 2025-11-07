@@ -43,6 +43,16 @@ export default function CustomKeybinds() {
       return;
     }
 
+    // allow pseudo-device "Browser"
+    if (newSlot === -1) {
+      setCustomKeybinds((previousKeybinds) =>
+        previousKeybinds.map((keybind, i) =>
+          i === index ? { ...keybind, slot: -1, event: null } : keybind
+        )
+      );
+      return;
+    }
+
     // check if slot is valid
     if (!(newSlot in devicesBySlot)) return;
 
@@ -67,6 +77,17 @@ export default function CustomKeybinds() {
     const slot = customKeybinds[index].slot;
     if (slot == null) return;
 
+    // Browser pseudo-device
+    if (slot === -1) {
+      setCustomKeybinds((previousKeybinds) =>
+        previousKeybinds.map((keybind, i) =>
+          i === index ? { ...keybind, event: newEvent } : keybind
+        )
+      );
+      return;
+    }
+
+    // Real device
     const device = devicesBySlot[slot];
 
     // check if event is allowed for selected device
@@ -133,7 +154,6 @@ export default function CustomKeybinds() {
               key={i}
               keybind={kb}
               index={i}
-              devicesBySlot={devicesBySlot}
               onToggleActive={handleToggleActive}
               onRemove={handleRemove}
               onEditKey={handleEditKey}
