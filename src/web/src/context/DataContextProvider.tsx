@@ -171,6 +171,9 @@ export default function DataContextProvider({
       const keyMappings = activeKeybinds[event.code];
       if (!keyMappings || keyMappings.length === 0) return;
 
+      event.preventDefault();
+      event.stopPropagation();
+
       // TODO: browser events are not direcly shown when browser is selected (after previously being null), but only after a device is selected
       keyMappings.forEach(([deviceId, buttonCode]) => {
         // Browser pseudo-device
