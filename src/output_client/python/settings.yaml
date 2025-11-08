@@ -1,12 +1,10 @@
 connection:
   host: localhost
   port: 8000
-
-# connection:
-#   host: controller.example.com
-#   port: 443
-#   ip_version: 4
-#   secure: true
+  # host: controller.example.com
+  # port: 443
+  # ip_version: 4
+  # secure: true
 
 devices:
   Controller (1):
@@ -29,8 +27,12 @@ devices:
       - BTN_THUMBL
       - BTN_THUMBR
     presets:
-      - default
-      - alt
+      - default controller
+      - default controller+
+      - Brotato WASD controller
+      - Brotato Arrows controller
+      - Brotato Numpad controller
+      - Brotato IJKL controller
     device_type: uinput
     uinput_name: Generic Device
     bustype: 0
@@ -57,8 +59,12 @@ devices:
       - BTN_THUMBL
       - BTN_THUMBR
     presets:
-      - default
-      - alt
+      - default controller
+      - default controller+
+      - Brotato WASD controller
+      - Brotato Arrows controller
+      - Brotato Numpad controller
+      - Brotato IJKL controller
     device_type: uinput
     uinput_name: Generic Device
     bustype: 0
@@ -85,8 +91,12 @@ devices:
       - BTN_THUMBL
       - BTN_THUMBR
     presets:
-      - default
-      - alt
+      - default controller
+      - default controller+
+      - Brotato WASD controller
+      - Brotato Arrows controller
+      - Brotato Numpad controller
+      - Brotato IJKL controller
     device_type: uinput
     uinput_name: Generic Device
     bustype: 0
@@ -113,8 +123,12 @@ devices:
       - BTN_THUMBL
       - BTN_THUMBR
     presets:
-      - default
-      - alt
+      - default controller
+      - default controller+
+      - Brotato WASD controller
+      - Brotato Arrows controller
+      - Brotato Numpad controller
+      - Brotato IJKL controller
     device_type: uinput
     uinput_name: Generic Device
     bustype: 0
@@ -123,7 +137,7 @@ devices:
     version: 0
 
 keybind_preset_library:
-  default:
+  default controller:
     - [KeyW, BTN_DPAD_UP]
     - [KeyA, BTN_DPAD_LEFT]
     - [KeyS, BTN_DPAD_DOWN]
@@ -136,11 +150,80 @@ keybind_preset_library:
     - [KeyR, BTN_TR]
     - [Escape, BTN_START]
     - [Space, BTN_A]
+    - [Enter, BTN_A]
     - [KeyZ, BTN_Y]
     - [KeyF, BTN_Y]
-  alt:
+  default controller+:
+    - [KeyW, BTN_DPAD_UP]
+    - [KeyA, BTN_DPAD_LEFT]
+    - [KeyS, BTN_DPAD_DOWN]
+    - [KeyD, BTN_DPAD_RIGHT]
+    - [KeyE, BTN_A]
+    - [KeyQ, BTN_B]
+    - [KeyX, BTN_X]
+    - [KeyY, BTN_Y]
+    - [Tab, BTN_TL]
+    - [KeyR, BTN_TR]
+    - [Escape, BTN_START]
+    - [Space, BTN_A]
+    - [Enter, BTN_A]
+    - [KeyZ, BTN_Y]
+    - [KeyF, BTN_Y]
+    - [ArrowUp, BTN_DPAD_UP]
+    - [ArrowLeft, BTN_DPAD_LEFT]
+    - [ArrowDown, BTN_DPAD_DOWN]
+    - [ArrowRight, BTN_DPAD_RIGHT]
+    - [Numpad8, BTN_DPAD_UP]
+    - [Numpad4, BTN_DPAD_LEFT]
+    - [Numpad2, BTN_DPAD_DOWN]
+    - [Numpad5, BTN_DPAD_DOWN]
+    - [Numpad6, BTN_DPAD_RIGHT]
+    - [NumpadEnter, BTN_A]
+  Brotato WASD controller:
+    - [KeyW, BTN_DPAD_UP]
+    - [KeyA, BTN_DPAD_LEFT]
+    - [KeyS, BTN_DPAD_DOWN]
+    - [KeyD, BTN_DPAD_RIGHT]
+    - [Space, BTN_A]
+    - [KeyR, BTN_B]
+    - [KeyE, BTN_X]
+    - [KeyF, BTN_Y]
+    - [Escape, BTN_START]
+    - [Tab, BTN_TL]
+    - [KeyT, BTN_TR]
+  Brotato Arrows controller:
     - [ArrowUp, BTN_DPAD_UP]
     - [ArrowDown, BTN_DPAD_DOWN]
     - [ArrowLeft, BTN_DPAD_LEFT]
     - [ArrowRight, BTN_DPAD_RIGHT]
-    - [Enter, BTN_START]
+    - [Numpad0, BTN_A]
+    - [ControlRight, BTN_B]
+    - [Delete, BTN_X]
+    - [End, BTN_Y]
+    - [Home, BTN_START]
+    - [PageDown, BTN_TL]
+    - [PageUp, BTN_TR]
+  Brotato Numpad controller:
+    - [Numpad8, BTN_DPAD_UP]
+    - [Numpad5, BTN_DPAD_DOWN]
+    - [Numpad4, BTN_DPAD_LEFT]
+    - [Numpad6, BTN_DPAD_RIGHT]
+    - [NumpadEnter, BTN_A]
+    - [Numpad1, BTN_B]
+    - [Numpad2, BTN_X]
+    - [Numpad3, BTN_Y]
+    - [NumpadDivide, BTN_START]
+    - [NumpadSubtract, BTN_TL]
+    - [NumpadAdd, BTN_TR]
+  Brotato IJKL controller:
+    - [KeyI, BTN_DPAD_UP]
+    - [KeyJ, BTN_DPAD_LEFT]
+    - [KeyK, BTN_DPAD_DOWN]
+    - [KeyL, BTN_DPAD_RIGHT]
+    - [KeyN, BTN_A]
+    - [KeyP, BTN_B]
+    - [KeyO, BTN_X]
+    - [Semicolon, BTN_Y]
+    - [KeyM, BTN_START]
+    - [Comma, BTN_TL]
+    - [Period, BTN_TR]

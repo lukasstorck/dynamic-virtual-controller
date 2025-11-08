@@ -6,7 +6,7 @@
 - clean up the implementation for device switching hotkeys
 
 - backlog:
-  - add more keybind presets, expand allowed keys
+  - expand allowed keys
   - check server side async lock on group operations (for edits / look ups of users and devices)
   - add new device types (gamepad sticks, joystick, keyboard, midi)
   - add new device for output client over web ui
