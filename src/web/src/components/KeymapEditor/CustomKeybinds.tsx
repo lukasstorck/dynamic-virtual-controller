@@ -1,7 +1,8 @@
 // CustomKeybinds.tsx
-import { Button, Row, Col } from "react-bootstrap";
-import { useDataContext } from "../../hooks/useDataContext";
+import { Button, Col, Row } from "react-bootstrap";
+
 import CustomKeybindRow from "./CustomKeybindRow";
+import { useDataContext } from "../../hooks/useDataContext";
 import type { CustomKeybind } from "../../types";
 
 export default function CustomKeybinds() {
@@ -9,18 +10,40 @@ export default function CustomKeybinds() {
 
   const handleAdd = () => {
     const newKeybind: CustomKeybind = {
-      key: null,
-      event: null,
-      slot: null,
       active: true,
+      event: null,
+      key: null,
+      slot: null,
     };
 
     setCustomKeybinds((previousKeybinds) => [...previousKeybinds, newKeybind]);
   };
 
-  const handleRemove = (index: number) => {
+  const handleEditEvent = (index: number, newEvent: string) => {
+    // check if device slot is set
+    const slot = customKeybinds[index].slot;
+    if (slot == null) return;
+
+    // Browser pseudo-device
+    if (slot === -1) {
+      setCustomKeybinds((previousKeybinds) =>
+        previousKeybinds.map((keybind, i) =>
+          i === index ? { ...keybind, event: newEvent } : keybind
+        )
+      );
+      return;
+    }
+
+    // Real device
+    const device = devicesBySlot[slot];
+
+    // check if event is allowed for selected device
+    if (!device || !device.allowedEvents.includes(newEvent)) return;
+
     setCustomKeybinds((previousKeybinds) =>
-      previousKeybinds.filter((_, i) => i !== index)
+      previousKeybinds.map((keybind, i) =>
+        i === index ? { ...keybind, event: newEvent } : keybind
+      )
     );
   };
 
@@ -72,31 +95,9 @@ export default function CustomKeybinds() {
     });
   };
 
-  const handleEditEvent = (index: number, newEvent: string) => {
-    // check if device slot is set
-    const slot = customKeybinds[index].slot;
-    if (slot == null) return;
-
-    // Browser pseudo-device
-    if (slot === -1) {
-      setCustomKeybinds((previousKeybinds) =>
-        previousKeybinds.map((keybind, i) =>
-          i === index ? { ...keybind, event: newEvent } : keybind
-        )
-      );
-      return;
-    }
-
-    // Real device
-    const device = devicesBySlot[slot];
-
-    // check if event is allowed for selected device
-    if (!device || !device.allowedEvents.includes(newEvent)) return;
-
+  const handleRemove = (index: number) => {
     setCustomKeybinds((previousKeybinds) =>
-      previousKeybinds.map((keybind, i) =>
-        i === index ? { ...keybind, event: newEvent } : keybind
-      )
+      previousKeybinds.filter((_, i) => i !== index)
     );
   };
 
@@ -149,16 +150,16 @@ export default function CustomKeybinds() {
             <Col>No keybinds added yet.</Col>
           </Row>
         ) : (
-          customKeybinds.map((kb, i) => (
+          customKeybinds.map((keybind, index) => (
             <CustomKeybindRow
-              key={i}
-              keybind={kb}
-              index={i}
-              onToggleActive={handleToggleActive}
-              onRemove={handleRemove}
+              index={index}
+              key={index}
+              keybind={keybind}
+              onEditEvent={handleEditEvent}
               onEditKey={handleEditKey}
               onEditSlot={handleEditSlot}
-              onEditEvent={handleEditEvent}
+              onRemove={handleRemove}
+              onToggleActive={handleToggleActive}
             />
           ))
         )}

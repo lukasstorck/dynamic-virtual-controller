@@ -1,8 +1,9 @@
-import Sidebar from "./components/Sidebar/Sidebar";
-import { Container, Row, Col, Card } from "react-bootstrap";
-import UserTable from "./components/Users/UsersTable";
+import { Card, Col, Container, Row } from "react-bootstrap";
+
 import DeviceGrid from "./components/Devices/DeviceGrid";
 import KeybindEditor from "./components/KeymapEditor/KeybindEditor";
+import Sidebar from "./components/Sidebar/Sidebar";
+import UserTable from "./components/Users/UsersTable";
 
 export default function App() {
   return (

@@ -1,13 +1,14 @@
-import { useMemo, type FC } from "react";
+import { useMemo } from "react";
+
+import { useDataContext } from "../../hooks/useDataContext";
 import { type User } from "../../types";
 import { formatLastActivity, formatPing } from "../../utils/formatting";
-import { useDataContext } from "../../hooks/useDataContext";
 
-interface Props {
+interface UserRowProps {
   user: User;
 }
 
-const UserRow: FC<Props> = ({ user }) => {
+export default function UserRow({ user }: UserRowProps) {
   const { groupState, userId } = useDataContext();
 
   const connectedOutputDevicesString = useMemo(() => {
@@ -42,6 +43,4 @@ const UserRow: FC<Props> = ({ user }) => {
       <td>{connectedOutputDevicesString}</td>
     </tr>
   );
-};
-
-export default UserRow;
+}

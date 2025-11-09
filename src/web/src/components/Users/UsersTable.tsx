@@ -1,15 +1,14 @@
 import { Table } from "react-bootstrap";
-import { useDataContext } from "../../hooks/useDataContext";
+
 import UserRow from "./UserRow";
+import { useDataContext } from "../../hooks/useDataContext";
 
 export default function UserTable() {
   const { groupState } = useDataContext();
 
   if (!groupState.users || groupState.users.length === 0) {
     return (
-      <div className="text-center text-muted py-3">
-        No users connected
-      </div>
+      <div className="text-center text-muted py-3">No users connected</div>
     );
   }
 

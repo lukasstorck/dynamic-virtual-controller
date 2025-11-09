@@ -1,21 +1,24 @@
 import { useMemo } from "react";
-import { Row, Col, Form, Accordion, AccordionButton } from "react-bootstrap";
+import { Accordion, AccordionButton, Col, Form, Row } from "react-bootstrap";
+
+import KeybindRow from "./KeybindRow";
 import { useDataContext } from "../../hooks/useDataContext";
 import type { Device } from "../../types";
-import KeybindRow from "./KeybindRow";
+
+interface DeviceAccordionItemProps {
+  device: Device;
+  eventKey: string;
+}
 
 export default function DeviceAccordionItem({
   device,
   eventKey,
-}: {
-  device: Device;
-  eventKey: string;
-}) {
+}: DeviceAccordionItemProps) {
   const {
     slotPresets,
-    handleSelectKeybindPreset,
     userColor,
     userId,
+    handleSelectKeybindPreset,
     handleSelectOutput,
   } = useDataContext();
 

@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useRef } from "react";
-import { Form, Button, Stack } from "react-bootstrap";
+import { Button, Form, Stack } from "react-bootstrap";
+
 import { useDataContext } from "../../hooks/useDataContext";
 import { Status } from "../../types";
 
 export default function GroupControls() {
   const groupIdInputRef = useRef<HTMLInputElement>(null);
   const {
+    connectionStatus,
     groupId,
     setGroupId,
     handleJoinGroup,
     handleLeaveGroup,
-    connectionStatus,
   } = useDataContext();
 
   const handleCopyGroupLink = useCallback(() => {

@@ -1,23 +1,24 @@
-import { useMemo, useState, type FC } from "react";
-import { Card, Button, Badge, FormControl } from "react-bootstrap";
+import { useMemo, useState } from "react";
+import { Badge, Button, Card, FormControl } from "react-bootstrap";
+
+import { useDataContext } from "../../hooks/useDataContext";
 import { type Device } from "../../types";
 import { formatPing } from "../../utils/formatting";
-import { useDataContext } from "../../hooks/useDataContext";
 
-interface Props {
+interface DeviceCardProps {
   device: Device;
 }
 
-const DeviceCard: FC<Props> = ({ device }) => {
+export default function DeviceCard({ device }: DeviceCardProps) {
   const {
-    handleRenameOutput,
-    user,
-    usersById,
-    userId,
     handleSelectOutput,
-    slotPresets,
+    handleRenameOutput,
     handleSelectKeybindPreset,
+    slotPresets,
+    user,
     userColor,
+    userId,
+    usersById,
   } = useDataContext();
   const [modifiedDeviceName, setModifiedDeviceName] = useState(device.name);
   const deviceNameModified = useMemo(() => {
@@ -92,8 +93,7 @@ const DeviceCard: FC<Props> = ({ device }) => {
           </Button>
         </div>
 
-        {/* Keybinds */}
-
+        {/* Keybind Presets */}
         <div className="d-flex align-items-center gap-2 mb-2">
           <label className="form-label mb-0 small text-nowrap">Keybinds:</label>
           <select
@@ -145,6 +145,4 @@ const DeviceCard: FC<Props> = ({ device }) => {
       </Card.Body>
     </Card>
   );
-};
-
-export default DeviceCard;
+}

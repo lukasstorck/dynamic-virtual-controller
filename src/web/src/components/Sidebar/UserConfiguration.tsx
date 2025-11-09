@@ -1,13 +1,14 @@
-import { Form, Button } from "react-bootstrap";
+import { Button, Form } from "react-bootstrap";
+
 import { useDataContext } from "../../hooks/useDataContext";
 
 export default function UserConfiguration() {
   const {
-    userName,
-    setUserName,
+    setShowKeybindEditor,
     userColor,
     setUserColor,
-    setShowKeybindEditor,
+    userName,
+    setUserName,
   } = useDataContext();
 
   return (

@@ -1,6 +1,7 @@
-import { Row, Col } from "react-bootstrap";
-import { useDataContext } from "../../hooks/useDataContext";
+import { Col, Row } from "react-bootstrap";
+
 import DeviceCard from "./DeviceCard";
+import { useDataContext } from "../../hooks/useDataContext";
 
 export default function DeviceGrid() {
   const { groupState } = useDataContext();

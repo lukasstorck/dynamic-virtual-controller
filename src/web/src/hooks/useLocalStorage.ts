@@ -4,20 +4,20 @@ import type { CustomKeybind, SlotPresets } from "../types";
 export const DEFAULT_COLOR = "#ff6f61";
 export const DEFAULT_NAME = `User-${crypto.randomUUID().slice(0, 4)}`;
 
-const STORAGE_NAME_KEY = "dvc_name";
 const STORAGE_COLOR_KEY = "dvc_color";
-const STORAGE_LAST_GROUP_ID_KEY = "dvc_last_group_id";
-const STORAGE_SLOT_PRESETS_KEY = "dvc_slot_presets";
 const STORAGE_CUSTOM_KEYBINDS_KEY = "dvc_custom_keybinds";
+const STORAGE_LAST_GROUP_ID_KEY = "dvc_last_group_id";
+const STORAGE_NAME_KEY = "dvc_name";
+const STORAGE_SLOT_PRESETS_KEY = "dvc_slot_presets";
 
 export function saveUserPreferences(
-  name: string,
   color: string,
-  lastGroupId: string
+  lastGroupId: string,
+  name: string
 ) {
-  localStorage.setItem(STORAGE_NAME_KEY, name);
   localStorage.setItem(STORAGE_COLOR_KEY, color);
   localStorage.setItem(STORAGE_LAST_GROUP_ID_KEY, lastGroupId);
+  localStorage.setItem(STORAGE_NAME_KEY, name);
 }
 
 export function loadUserPreferences() {
@@ -56,20 +56,20 @@ export function loadCustomKeybinds() {
 export function useLocalStorageUserData() {
   // create state variables and load data from local storage (or default values)
   const { storedName, storedColor, storedLastGroupId } = loadUserPreferences();
-  const [userName, setUserName] = useState<string>(storedName);
-  const [userColor, setUserColor] = useState<string>(storedColor);
-  const [lastGroupId, setLastGroupId] = useState(storedLastGroupId);
   const [slotPresets, setSlotPresets] = useState<SlotPresets>(
     loadSlotPresets()
   );
+  const [lastGroupId, setLastGroupId] = useState(storedLastGroupId);
+  const [userColor, setUserColor] = useState<string>(storedColor);
+  const [userName, setUserName] = useState<string>(storedName);
   const [customKeybinds, setCustomKeybinds] = useState<CustomKeybind[]>(
     loadCustomKeybinds()
   );
 
   // save values to local storage on change
   useEffect(() => {
-    saveUserPreferences(userName, userColor, lastGroupId);
-  }, [userName, userColor, lastGroupId]);
+    saveUserPreferences(userColor, lastGroupId, userName);
+  }, [userColor, lastGroupId, userName]);
 
   useEffect(() => {
     saveSlotPresets(slotPresets);
@@ -80,15 +80,15 @@ export function useLocalStorageUserData() {
   }, [customKeybinds]);
 
   return {
-    userName,
-    setUserName,
-    userColor,
-    setUserColor,
+    customKeybinds,
+    setCustomKeybinds,
     lastGroupId,
     setLastGroupId,
     slotPresets,
     setSlotPresets,
-    customKeybinds,
-    setCustomKeybinds,
+    userColor,
+    setUserColor,
+    userName,
+    setUserName,
   };
 }

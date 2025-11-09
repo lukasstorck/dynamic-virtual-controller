@@ -1,6 +1,7 @@
 import { Card, Stack } from "react-bootstrap";
-import UserConfiguration from "./UserConfiguration";
+
 import GroupControls from "./GroupControls";
+import UserConfiguration from "./UserConfiguration";
 
 export default function Sidebar() {
   return (

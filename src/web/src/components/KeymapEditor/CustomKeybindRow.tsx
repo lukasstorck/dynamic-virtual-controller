@@ -1,27 +1,28 @@
 // CustomKeybindRow.tsx
-import { useEffect, useMemo, type JSX } from "react";
-import { Row, Col, Button, Form } from "react-bootstrap";
-import type { CustomKeybind } from "../../types";
+import { type JSX, useEffect, useMemo } from "react";
+import { Button, Col, Form, Row } from "react-bootstrap";
+
 import { useDataContext } from "../../hooks/useDataContext";
+import type { CustomKeybind } from "../../types";
 
 interface CustomKeybindRowProps {
-  keybind: CustomKeybind;
   index: number;
-  onToggleActive: (index: number) => void;
-  onRemove: (index: number) => void;
+  keybind: CustomKeybind;
+  onEditEvent: (index: number, newEvent: string) => void;
   onEditKey: (index: number, newKey: string) => void;
   onEditSlot: (index: number, newSlot: number | null) => void;
-  onEditEvent: (index: number, newEvent: string) => void;
+  onRemove: (index: number) => void;
+  onToggleActive: (index: number) => void;
 }
 
 export default function CustomKeybindRow({
-  keybind,
   index,
-  onToggleActive,
-  onRemove,
+  keybind,
+  onEditEvent,
   onEditKey,
   onEditSlot,
-  onEditEvent,
+  onRemove,
+  onToggleActive,
 }: CustomKeybindRowProps) {
   const {
     customKeybindActiveListener,

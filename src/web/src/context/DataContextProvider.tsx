@@ -1,62 +1,64 @@
 import {
-  useState,
-  useMemo,
-  useEffect,
   type ReactNode,
   useCallback,
+  useEffect,
+  useMemo,
+  useState,
 } from "react";
 
 import { DataContext } from "./DataContext";
 import { Status, type User } from "../types";
-import { useLocalStorageUserData } from "../hooks/useLocalStorage";
 import { useConnectionManager } from "../hooks/useConnectionManager";
+import { useLocalStorageUserData } from "../hooks/useLocalStorage";
+
+interface DataContextProviderProps {
+  children: ReactNode;
+}
 
 export default function DataContextProvider({
   children,
-}: {
-  children: ReactNode;
-}) {
-  const [showKeybindEditor, setShowKeybindEditor] = useState(false);
+}: DataContextProviderProps) {
   const [customKeybindActiveListener, setCustomKeybindActiveListener] =
     useState<number | null>(null);
+  const [showKeybindEditor, setShowKeybindEditor] = useState(false);
 
   // load user name, color, slot presets and
   // custom keybinds from local storage
   const {
-    userName,
-    setUserName,
-    userColor,
-    setUserColor,
+    customKeybinds,
+    setCustomKeybinds,
     lastGroupId,
     setLastGroupId,
     slotPresets,
     setSlotPresets,
-    customKeybinds,
-    setCustomKeybinds,
+    userColor,
+    setUserColor,
+    userName,
+    setUserName,
   } = useLocalStorageUserData();
 
   const {
     connectionStatus,
-    userId,
-    setUserId,
+    devicesById,
+    devicesBySlot,
     groupId,
     setGroupId,
     groupState,
-    user,
-    devicesById,
-    devicesBySlot,
     handleJoinGroup,
     handleLeaveGroup,
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,
     sendMessage,
+    user,
+    userId,
+    setUserId,
   } = useConnectionManager({
-    setSlotPresets,
     lastGroupId,
     setLastGroupId,
-    setUserName,
+    setSlotPresets,
     setUserColor,
+    setUserName,
   });
 
   useEffect(() => {
@@ -155,7 +157,7 @@ export default function DataContextProvider({
     });
 
     return map;
-  }, [user, devicesById, devicesBySlot, customKeybinds, slotPresets]);
+  }, [customKeybinds, devicesById, devicesBySlot, slotPresets, user]);
 
   const handleKeyPress = useCallback(
     (event: KeyboardEvent, state: number) => {
@@ -248,11 +250,11 @@ export default function DataContextProvider({
       });
     },
     [
-      connectionStatus,
       activeKeybinds,
+      connectionStatus,
       devicesBySlot,
-      slotPresets,
       sendMessage,
+      slotPresets,
       setSlotPresets,
     ]
   );
@@ -276,34 +278,36 @@ export default function DataContextProvider({
   return (
     <DataContext
       value={{
-        groupState,
         customKeybinds,
         setCustomKeybinds,
-        groupId,
-        setGroupId,
-        userId,
-        setUserId,
+        slotPresets,
+        setSlotPresets,
         userColor,
         setUserColor,
         userName,
         setUserName,
-        slotPresets,
-        setSlotPresets,
-        handleSelectKeybindPreset,
-        user,
-        activeKeybinds,
+
         connectionStatus,
+        devicesById,
+        devicesBySlot,
+        groupId,
+        setGroupId,
+        groupState,
         handleJoinGroup,
         handleLeaveGroup,
         handleRenameOutput,
+        handleSelectKeybindPreset,
         handleSelectOutput,
-        usersById,
-        devicesById,
-        devicesBySlot,
-        showKeybindEditor,
-        setShowKeybindEditor,
+        user,
+        userId,
+        setUserId,
+
+        activeKeybinds,
         customKeybindActiveListener,
         setCustomKeybindActiveListener,
+        showKeybindEditor,
+        setShowKeybindEditor,
+        usersById,
       }}
     >
       {children}

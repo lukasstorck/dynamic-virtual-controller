@@ -1,8 +1,8 @@
-import { Modal, Button } from "react-bootstrap";
-import { useDataContext } from "../../hooks/useDataContext";
+import { Button, Modal } from "react-bootstrap";
 
-import DeviceOverview from "./DeviceOverview";
 import CustomKeybinds from "./CustomKeybinds";
+import DeviceOverview from "./DeviceOverview";
+import { useDataContext } from "../../hooks/useDataContext";
 
 export default function KeybindEditor() {
   const { showKeybindEditor, setShowKeybindEditor } = useDataContext();

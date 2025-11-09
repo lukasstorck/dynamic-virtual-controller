@@ -45,19 +45,21 @@ function groupStateReducer(state: GroupState, action: GroupUpdateAction) {
   }
 }
 
-export function useConnectionManager({
-  setSlotPresets,
-  lastGroupId,
-  setLastGroupId,
-  setUserName,
-  setUserColor,
-}: {
-  setSlotPresets: React.Dispatch<React.SetStateAction<SlotPresets>>;
+interface UseConnectionManagerProps {
   lastGroupId: string;
   setLastGroupId: React.Dispatch<React.SetStateAction<string>>;
-  setUserName: React.Dispatch<React.SetStateAction<string>>;
+  setSlotPresets: React.Dispatch<React.SetStateAction<SlotPresets>>;
   setUserColor: React.Dispatch<React.SetStateAction<string>>;
-}) {
+  setUserName: React.Dispatch<React.SetStateAction<string>>;
+}
+
+export function useConnectionManager({
+  lastGroupId,
+  setLastGroupId,
+  setSlotPresets,
+  setUserColor,
+  setUserName,
+}: UseConnectionManagerProps) {
   const { sendJsonMessage } = useWebSocket(websocketUrl, {
     onOpen: () => {
       setConnectionStatus(Status.Connected);
@@ -105,13 +107,22 @@ export function useConnectionManager({
     [sendJsonMessage]
   );
 
+  const handleActivityAndPingUpdateMessage = useCallback(
+    (
+      data: Extract<WebSocketIncomingMessage, { type: "activity_and_ping" }>
+    ) => {
+      updateGroupState(data);
+    },
+    []
+  );
+
   const handleConfigMessage = useCallback(
     (data: Extract<WebSocketIncomingMessage, { type: "config" }>) => {
       if (data.user_id) setUserId(data.user_id);
       if (data.user_name) setUserName(data.user_name);
       if (data.user_color) setUserColor(data.user_color);
     },
-    [setUserId, setUserName, setUserColor]
+    [setUserColor, setUserId, setUserName]
   );
 
   const handleGroupStateMessage = useCallback(
@@ -202,15 +213,6 @@ export function useConnectionManager({
     [setGroupId, setSlotPresets]
   );
 
-  const handleActivityAndPingUpdateMessage = useCallback(
-    (
-      data: Extract<WebSocketIncomingMessage, { type: "activity_and_ping" }>
-    ) => {
-      updateGroupState(data);
-    },
-    []
-  );
-
   const handlePingRequestMessage = useCallback(
     (data: Extract<WebSocketIncomingMessage, { type: "ping" }>) => {
       sendMessage({ type: "pong", id: data.id });
@@ -222,14 +224,14 @@ export function useConnectionManager({
     (event: MessageEvent) => {
       const data: WebSocketIncomingMessage = JSON.parse(event.data);
       switch (data.type) {
+        case "activity_and_ping":
+          handleActivityAndPingUpdateMessage(data);
+          break;
         case "config":
           handleConfigMessage(data);
           break;
         case "group_state":
           handleGroupStateMessage(data);
-          break;
-        case "activity_and_ping":
-          handleActivityAndPingUpdateMessage(data);
           break;
         case "ping":
           handlePingRequestMessage(data);
@@ -240,9 +242,9 @@ export function useConnectionManager({
       }
     },
     [
+      handleActivityAndPingUpdateMessage,
       handleConfigMessage,
       handleGroupStateMessage,
-      handleActivityAndPingUpdateMessage,
       handlePingRequestMessage,
     ]
   );
@@ -261,7 +263,7 @@ export function useConnectionManager({
       });
       setLastGroupId(groupId);
     },
-    [sendMessage, connectionStatus, setConnectionStatus, setLastGroupId]
+    [connectionStatus, setConnectionStatus, setLastGroupId, sendMessage]
   );
 
   const handleLeaveGroup = useCallback(() => {
@@ -277,7 +279,7 @@ export function useConnectionManager({
         ? Status.Connected
         : previousStatus;
     });
-  }, [sendMessage, setConnectionStatus]);
+  }, [setConnectionStatus, sendMessage]);
 
   const handleRenameOutput = (deviceId: string, newName: string) => {
     if (connectionStatus !== Status.JoinedGroup) return;
@@ -327,19 +329,19 @@ export function useConnectionManager({
 
   return {
     connectionStatus,
-    userId,
-    setUserId,
+    devicesById,
+    devicesBySlot,
     groupId,
     setGroupId,
     groupState,
-    user,
-    devicesById,
-    devicesBySlot,
     handleJoinGroup,
     handleLeaveGroup,
     handleRenameOutput,
     handleSelectKeybindPreset,
     handleSelectOutput,
     sendMessage,
+    user,
+    userId,
+    setUserId,
   };
 }

@@ -36,7 +36,6 @@ This allows Coop Gameplay over the internet with a variaty of features:
 
 ### ToDos
 
-- reorder imports
 - clean up the implementation for device switching hotkeys
 - online joining seems to take very long (unless onreload shortly after joining)
 - create dev compose file

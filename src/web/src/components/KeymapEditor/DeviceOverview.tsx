@@ -1,6 +1,7 @@
-import { Card, Accordion } from "react-bootstrap";
-import { useDataContext } from "../../hooks/useDataContext";
+import { Accordion, Card } from "react-bootstrap";
+
 import DeviceAccordionItem from "./DeviceAccordionItem";
+import { useDataContext } from "../../hooks/useDataContext";
 
 export default function DeviceOverview() {
   const { groupState } = useDataContext();
