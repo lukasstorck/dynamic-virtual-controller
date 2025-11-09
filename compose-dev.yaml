@@ -1,0 +1,33 @@
+services:
+  server:
+    extends:
+      file: compose.yaml
+      service: server
+    command: ["uvicorn", "server:app", "--host", "0.0.0.0", "--reload"]
+
+  web-build-runner:
+    extends:
+      file: compose.yaml
+      service: web-build-runner
+    expose:
+      - 3000
+    command: ["sh", "-c", "npm install && npm run dev -- --host 0.0.0.0 --port 3000"]
+    restart: unless-stopped
+
+  nginx:
+    extends:
+      file: compose.yaml
+      service: nginx
+    ports:
+      - 8000:80
+    volumes:
+      - ./src/nginx/nginx_dev.conf:/etc/nginx/nginx.conf
+
+networks:
+  local:
+    name: local
+    external: true
+  default:
+    name: dvc-internal
+    external: false
+
