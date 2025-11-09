@@ -10,7 +10,7 @@ services:
 
   web-build-runner:
     container_name: dvc-web-build-runner
-    image: node:24
+    image: node:25
     working_dir: /app
     command: ["sh", "-c", "npm install && npm run build --"]
     volumes:
