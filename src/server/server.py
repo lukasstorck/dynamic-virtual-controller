@@ -324,7 +324,7 @@ async def ws_user(websocket: fastapi.WebSocket):
                 user.name = incoming_data.get('name')
                 color = incoming_data.get('color').lower().strip()
                 if color != '' and not is_too_white(color):
-                    user.color = incoming_data.get('color')
+                    user.color = color
                 user.last_activity_time = time.time()
                 if group:
                     await group.broadcast_to_users(json.dumps(group.serialize_state()))
