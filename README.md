@@ -34,18 +34,24 @@ This allows Coop Gameplay over the internet with a variaty of features:
 ## Implementation
 
 
-### ToDos
+
+### Known Bugs
+
+- Sometimes, the first connection attempt to the server over the internet is slow.
+  This then fails by timeout and on the second try it succeeds immediately.
+  It does not seem to happen locally or after reloading the page shortly it previously succeeding.
+- When selecting "Browser" as the target device for a custom keybind, the selectable options for the output event are not directly updated and default to the placeholder option.
+  This only seems to happen when the placeholder for the target device/slot was previously selected (or selected by default). A workaround is to first select another device, if there are devices conneted.
+
+
+### ToDos and Backlog
 
 - clean up the implementation for device switching hotkeys
-- online joining seems to take very long (unless onreload shortly after joining)
-- create dev compose file
-  - build with npm and host /build instead
-  - remove --reload from production compose file
-
-- backlog:
-  - improve mobile UI (keybind editor)
-  - expand allowed keys
-  - check server side async lock on group operations (for edits / look ups of users and devices)
-  - add new device types (gamepad sticks, joystick, keyboard, midi)
-  - add new device for output client over web ui
-    - change device settings (device type, vendor id, product id, ...) over web ui (based on permissions)
+  - no custom string building and parsing for "Browser" event list and hotkey event handeling -> use object with device slot and action fields
+- refactor users and devices variables in WebSocketIncomingMessage and GroupUpdateAction to include named fields instead of tuples for ease of understanding
+- improve mobile UI (keybind editor)
+- expand allowed keys
+- check server side async lock on group operations (for edits / look ups of users and devices)
+- add new device types (gamepad sticks, joystick, keyboard, midi)
+- add new device for output client over web ui
+  - change device settings (device type, vendor id, product id, ...) over web ui (based on permissions)

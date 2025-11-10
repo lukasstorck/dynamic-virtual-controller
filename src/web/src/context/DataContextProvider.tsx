@@ -176,7 +176,6 @@ export default function DataContextProvider({
       event.preventDefault();
       event.stopPropagation();
 
-      // TODO: browser events are not direcly shown when browser is selected (after previously being null), but only after a device is selected
       keyMappings.forEach(([deviceId, buttonCode]) => {
         // Browser pseudo-device
         if (deviceId === "BROWSER") {

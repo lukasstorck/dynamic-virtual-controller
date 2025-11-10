@@ -41,7 +41,7 @@ export type GroupUpdateAction =
   | { type: "set_users_and_devices"; users: User[]; devices: Device[] }
   | {
       type: "activity_and_ping";
-      users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
+      users?: Record<string, [number, number]>;
       devices?: Record<string, number>;
     };
 
@@ -61,7 +61,7 @@ export type WebSocketIncomingMessage =
     }
   | {
       type: "activity_and_ping";
-      users?: Record<string, [number, number]>; //TODO: update with variable names for last activity and ping
+      users?: Record<string, [number, number]>;
       devices?: Record<string, number>;
     }
   | { type: "ping"; id: string };
