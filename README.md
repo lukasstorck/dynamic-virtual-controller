@@ -80,7 +80,7 @@ Note that the group_id and group association is currently not part of the user o
 
 Each device has the following properties
 
-|               User Attribute (Type)               | Description                                                                                                                                   |
+|              Device Attribute (Type)              | Description                                                                                                                                   |
 | :-----------------------------------------------: | --------------------------------------------------------------------------------------------------------------------------------------------- |
 |                      id: str                      | identification                                                                                                                                |
 |                   group_id: str                   | id of associated group                                                                                                                        |
@@ -93,7 +93,7 @@ Each device has the following properties
 
 Each group has the following properties
 
-|          User Attribute (Type)          | Description                                             |
+|         Group Attribute (Type)          | Description                                             |
 | :-------------------------------------: | ------------------------------------------------------- |
 |                 id: str                 | identification                                          |
 |         users: dict[str, User]          | id of connected group                                   |
