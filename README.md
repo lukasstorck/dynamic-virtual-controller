@@ -18,10 +18,12 @@ This allows Coop Gameplay over the internet with a variaty of features:
 
 ## Usage
 
-- configure output devices in `src/output_client/python/settings.yaml`
-- start output devices with `python src/output_client/python/output_client.py --settings src/output_client/python/settings.yaml`
+- copy and configure output device settings  
+  `cp src/output_client/python/example_device_settings.yaml device_settings.yaml`
+- start output devices with  
+  `python src/output_client/python/output_client.py`
   - this only works on Linux based systems, as Windows does not easily allow creating virtual devices
-- connect to web UI and active a device
+- connect to web UI and activate a device
 - now keybinds that match the preset are translated and sent to the output device, which simulates the output events on a virtual device
 
 

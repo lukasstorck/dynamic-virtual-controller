@@ -2,3 +2,4 @@ __pycache__/
 .vscode/
 
 src/output_client/cpp/output_client
+device_settings.yaml

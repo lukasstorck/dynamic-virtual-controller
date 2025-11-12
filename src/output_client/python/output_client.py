@@ -350,7 +350,7 @@ class ConnectionManager:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--settings', default='settings.yaml', help='YAML settings file')
+    parser.add_argument('--settings', default='device_settings.yaml', help='YAML settings file')
     args = parser.parse_args()
 
     config: dict[str, dict] = {}
